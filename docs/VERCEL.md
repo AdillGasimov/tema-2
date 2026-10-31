@@ -6,6 +6,8 @@ The owner imported `AdillGasimov/tema-2`, branch `main`, into their existing Ver
 
 The Vercel GitHub integration can build updates pushed to `main` without a Vercel API credential in this workspace. Open the existing project's Deployments page to inspect the latest commit and build status. The agent has not independently accessed the project's configuration, live URL or runtime logs; current remote evidence is the owner's screenshots.
 
+The owner supplied the website URL `https://tema-2-staging.vercel.app/`. This environment's outbound proxy blocks that hostname (CONNECT 403), so an attempted HTTPS check could not determine the application's response. Repair commit `4f5bdba` is pushed to `main`; confirm the latest deployment reaches Ready, then open Visit.
+
 Direct API/CLI inspection would need account authentication. An optional secure `VERCEL_TOKEN` requirement remains in the cloud draft, scoped to `api.vercel.com`; it has no saved binding in the running environment. It is not a prerequisite for GitHub-triggered deployments. Never send tokens in chat or commit them. Cloud draft publication and a Vercel website deployment are separate operations.
 
 ## Database preparation in the Vercel build

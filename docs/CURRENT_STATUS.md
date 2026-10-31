@@ -7,7 +7,7 @@ The owner requested that all available setup and publication work be handled aut
 - Source code is committed and pushed to `https://github.com/AdillGasimov/tema-2` on `main`. Private environment and login files are ignored and were excluded from Git.
 - The Vercel repair passed lint, TypeScript, 31 unit tests, 18 database/storage integration tests, the full Vercel build against a fresh test database with HTTP 200 storefront smoke check, and four Chromium end-to-end tests.
 - Before this follow-up, a real Docker build passed. The resulting `tema-2:staging` image passed a browser smoke test with the existing local owner account, plus database/storage health. The container runs as the non-root Node user. Private `.env` and owner credential files are not embedded in it. That local image has not been rebuilt for the Vercel repair.
-- Local restartable containers are `tema-2-app` (port 3000), `tema-2-storage` (port 9000), and `tema-2-db-1` (PostgreSQL). Published host ports remain loopback-only. The owner separately deployed the Vercel project `tema-2-staging`; its full live URL has not been independently verified here.
+- Local restartable containers are `tema-2-app` (port 3000), `tema-2-storage` (port 9000), and `tema-2-db-1` (PostgreSQL). Published host ports remain loopback-only. The owner separately deployed the Vercel project `tema-2-staging` and supplied `https://tema-2-staging.vercel.app/`.
 - Existing database and object files were preserved. The business database contains no fabricated sales or products. Local owner credentials remain in the private ignored `.local/owner-credentials.json` file.
 
 ## Local container details
@@ -20,7 +20,7 @@ For these already-created containers, use the local Docker daemon and start `tem
 
 ## External blockers
 
-The owner created `tema-2-staging` using Vercel's GitHub import, selected Prisma Postgres, and deployed. Runtime screenshots show connected PostgreSQL with missing tables. The Vercel build now applies existing migrations and initializes settings on the primary target, preserving existing records; preview builds skip database changes. The repair must still be confirmed against the latest hosted deployment. See `docs/VERCEL.md`.
+The owner created `tema-2-staging` using Vercel's GitHub import, selected Prisma Postgres, and deployed. Runtime screenshots show connected PostgreSQL with missing tables. Repair commit `4f5bdba` is pushed to GitHub `main`: the Vercel build now applies existing migrations and initializes settings on the primary target, preserving existing records; preview builds skip database changes. A direct HTTPS check of the supplied live URL was blocked by the cloud environment's outbound proxy (CONNECT 403), not an application response. The repair must still be confirmed against the latest hosted deployment. See `docs/VERCEL.md`.
 
 GitHub-triggered deployment does not require a Vercel API token in this workspace. The running environment has no Vercel credential, linked CLI project or deployment connector, so direct inspection is unavailable. The previously saved token requirement is optional for that inspection. Remote secrets, the first staging administrator, actual image storage, live contact/catalog configuration and the full hosted workflow remain unverified. Do not provide tokens/passwords in chat.
 
