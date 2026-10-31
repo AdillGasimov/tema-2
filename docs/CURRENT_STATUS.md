@@ -20,7 +20,7 @@ For these already-created containers, use the local Docker daemon and start `tem
 
 ## External blockers
 
-No hosting provider credentials, server connection, cloud identity or deployment connector is configured. An empty outbound identity manifest and absent hosting CLI configurations were verified. The next prerequisite for a browser-accessible staging URL is connecting an existing hosting account or server through secure environment settings. Do not provide tokens/passwords in chat. Account signup, billing details, domain ownership and real business contact/product data cannot be invented by the agent.
+The owner selected Vercel for staging. No Vercel credential, linked project or deployment connector is configured. An empty outbound identity manifest and absent hosting CLI configurations were verified. A secure `VERCEL_TOKEN` requirement is saved in the cloud draft for `api.vercel.com`; the next prerequisite is entering that binding through secure environment settings and saving the configuration. See `docs/VERCEL.md`. Do not provide tokens/passwords in chat. Account signup, billing details, domain ownership and real business contact/product data cannot be invented by the agent.
 
 The cloud tools support saving installation/startup drafts and repository references, but do not expose environment publication. Review/save and Publish are product interface actions. The saved draft is not a published environment or a production website deployment.
 
