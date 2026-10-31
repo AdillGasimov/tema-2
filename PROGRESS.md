@@ -55,5 +55,14 @@
 - Completed/commissioned attribution transfers are intentionally blocked. Pre-completion attribution corrections and dispute review are audited. A completed-sale partner-transfer ledger needs a separate explicit financial-correction implementation.
 - Financial reports export CSV, not PDF. Partner referral cards export PDF with trim/bleed.
 - No external SMS/email/WhatsApp notifications, automatic bank payments, payment gateway, self-service partner application form, or MFA/SSO are claimed implemented.
-- Docker image build and hosted CI execution have not been verified in this session. The actual Next.js standalone build/server and browser workflow have been verified.
+- The Docker image `tema-2:staging` now builds successfully. Its actual container passed application/storage/database health, storefront rendering, owner login and a zero-transaction dashboard check. It runs as UID 1000 and excludes `.env` and local owner credentials from the image. Hosted CI results have not been verified.
 - Local runtime/processes do not prove a fresh published cloud task restores successfully. Production deployment, external integration validation, load/security audit and restore drills have not been performed.
+
+## Follow-up automation requested by the owner
+
+- Committed all 112 reviewed source/configuration files and pushed the application to `AdillGasimov/tema-2`, branch `main`. Verified the remote commit matches the local commit. Credentials, local private files, dependency/build folders and browser traces are excluded.
+- Restored the local app and S3 development emulator in restartable containers (`tema-2-app`, `tema-2-storage`) alongside the existing healthy `tema-2-db-1` database container. This avoids relying on an interactive terminal staying open. Stored objects and existing database data were preserved.
+- Container hostname routing requires S3rver's supported `--no-vhost-buckets` option because the application uses path-style S3 requests. Signatures and TLS verification were not disabled.
+- The local application still has zero products/orders/partners and one local administrator. Real store contact, catalog and payments were not invented.
+- Hosting credential variables and CLI configuration are absent, runtime secret bindings and outbound identity connections are empty, and no deployment connector is available. A public staging deployment needs a hosting account/server connection. The GitHub API request returned Forbidden, while native Git read/push operations work; no duplicate GitHub token was requested.
+- Cloud configuration tools can save drafts but expose no Publish operation. Environment publication must be performed through the owner's interface. Saving the draft is not publication or a website deployment.

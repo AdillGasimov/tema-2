@@ -59,5 +59,6 @@ Prisma 6's experimental migration adapter cannot deserialize PostgreSQL's intern
 - [Architecture and security boundaries](docs/ARCHITECTURE.md).
 - [Production deployment, backups, worker and current limits](docs/DEPLOYMENT.md).
 - [Implementation plan](IMPLEMENTATION_PLAN.md) and [verified progress](PROGRESS.md).
+- [Current automation and deployment status](docs/CURRENT_STATUS.md).
 
 Google Sheets requires an optional service account and spreadsheet and remains disabled by default. Image storage in production must be a persistent private S3-compatible bucket. The included local emulator is development-only. Production external services, backups, legal policy and operational review still need the owner's configuration. No production deployment is authorized or performed.
