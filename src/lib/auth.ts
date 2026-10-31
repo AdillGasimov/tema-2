@@ -3,16 +3,18 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { headers } from "next/headers";
 import { db } from "./db";
 import { AppError } from "./errors";
+import { appOrigin, trustedOrigins } from "./site";
 
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: appOrigin(),
+  trustedOrigins: trustedOrigins(),
   secret: process.env.BETTER_AUTH_SECRET,
   emailAndPassword: { enabled: true, disableSignUp: true, minPasswordLength: 12, maxPasswordLength: 128 },
   session: { expiresIn: 60 * 60 * 24, updateAge: 60 * 60, cookieCache: { enabled: false } },
   user: { additionalFields: { role: { type: "string", defaultValue: "PARTNER", input: false } } },
   rateLimit: { enabled: true, window: 60, max: 10 },
-  advanced: { useSecureCookies: process.env.NODE_ENV === "production" && process.env.BETTER_AUTH_URL?.startsWith("https:") },
+  advanced: { useSecureCookies: process.env.NODE_ENV === "production" && appOrigin().startsWith("https:") },
 });
 export async function session() { return auth.api.getSession({ headers: await headers() }); }
 export async function requireUser(role?: "ADMIN" | "PARTNER") {

@@ -1,12 +1,12 @@
 # Deployment and operations
 
-No production deployment has been performed or authorized. These are preparation instructions for a later approved deployment.
+The owner has deployed the separate `tema-2-staging` project through Vercel's GitHub integration. See `VERCEL.md` for its automatic database preparation and current verification limits. These instructions also cover a later business production release.
 
 ## Required services and configuration
 
 Use Node 24, a managed PostgreSQL 17 database with TLS verification, and a private persistent S3-compatible bucket. Next.js can run on a managed Next.js host or the included Docker image. The runtime must have network access to its database and storage. Do not use ephemeral local filesystem storage in production.
 
-Set private environment variables using the host's secret manager, following `.env.example`. Generate separate cryptographically random secrets of at least 32 bytes for `BETTER_AUTH_SECRET`, `REFERRAL_SECRET`, and `JOB_SECRET`. Set `BETTER_AUTH_URL` to the exact HTTPS public origin. Never prefix credentials with `NEXT_PUBLIC_`. A build does not require real credentials or a running database. Provide runtime credentials separately; the Docker build-only placeholders are not defaults in the application.
+Set private environment variables using the host's secret manager, following `.env.example`. Generate separate cryptographically random secrets of at least 32 bytes for `BETTER_AUTH_SECRET`, `REFERRAL_SECRET`, and `JOB_SECRET`. Set `BETTER_AUTH_URL` to the exact HTTPS public origin; Vercel can alternatively supply its canonical hostname. Never prefix credentials with `NEXT_PUBLIC_`. The ordinary `npm run build` and Docker build do not require a running database. The primary-target Vercel build also runs database preparation and therefore requires its configured database connection. Provide runtime credentials separately; the Docker build-only placeholders are not defaults in the application.
 
 For AWS, prefer a workload role and the SDK's default credential chain. For other S3 providers set `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`. Bucket permissions need only get, put, head and delete objects under `images/`. Do not make the bucket public; the application serves public product/branding images and checks admin access for drafts/expense attachments. Configure TLS and appropriate provider-side backup/versioning. Cross-origin bucket CORS is unnecessary because uploads go through the server.
 

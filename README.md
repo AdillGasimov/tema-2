@@ -60,6 +60,8 @@ Prisma 6's experimental migration adapter cannot deserialize PostgreSQL's intern
 - [Production deployment, backups, worker and current limits](docs/DEPLOYMENT.md).
 - [Implementation plan](IMPLEMENTATION_PLAN.md) and [verified progress](PROGRESS.md).
 - [Current automation and deployment status](docs/CURRENT_STATUS.md).
-- [Vercel staging preparation and remaining access requirement](docs/VERCEL.md).
+- [Vercel staging deployment and database preparation](docs/VERCEL.md).
 
-Google Sheets requires an optional service account and spreadsheet and remains disabled by default. Image storage in production must be a persistent private S3-compatible bucket. The included local emulator is development-only. Production external services, backups, legal policy and operational review still need the owner's configuration. No production deployment is authorized or performed.
+The owner has imported and deployed `tema-2-staging` through Vercel's GitHub integration. `vercel.json` runs `npm run build:vercel`, which applies migrations and initializes missing settings on the primary Vercel target before building. Preview builds skip database changes. The ordinary local/Docker build does not require a database. See the Vercel guide for the release-job opt-out and remaining service checks.
+
+Google Sheets requires an optional service account and spreadsheet and remains disabled by default. Image storage in production must be a persistent private S3-compatible bucket. The included local emulator is development-only. Production external services, backups, legal policy and operational review still need the owner's configuration. The staging deployment does not establish readiness for a real business launch.

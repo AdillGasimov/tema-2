@@ -5,9 +5,9 @@ The owner requested that all available setup and publication work be handled aut
 ## Completed
 
 - Source code is committed and pushed to `https://github.com/AdillGasimov/tema-2` on `main`. Private environment and login files are ignored and were excluded from Git.
-- The existing application checks passed: lint, TypeScript, 17 unit tests, 15 database/storage integration tests, production build, and four Chromium end-to-end tests.
-- A real Docker build now passes. The resulting `tema-2:staging` image passed a browser smoke test with the existing local owner account, plus database/storage health. The container runs as the non-root Node user. Private `.env` and owner credential files are not embedded in it.
-- Local restartable containers are `tema-2-app` (port 3000), `tema-2-storage` (port 9000), and `tema-2-db-1` (PostgreSQL). Published host ports remain loopback-only. There is no public website URL.
+- The Vercel repair passed lint, TypeScript, 31 unit tests, 18 database/storage integration tests, the full Vercel build against a fresh test database with HTTP 200 storefront smoke check, and four Chromium end-to-end tests.
+- Before this follow-up, a real Docker build passed. The resulting `tema-2:staging` image passed a browser smoke test with the existing local owner account, plus database/storage health. The container runs as the non-root Node user. Private `.env` and owner credential files are not embedded in it. That local image has not been rebuilt for the Vercel repair.
+- Local restartable containers are `tema-2-app` (port 3000), `tema-2-storage` (port 9000), and `tema-2-db-1` (PostgreSQL). Published host ports remain loopback-only. The owner separately deployed the Vercel project `tema-2-staging`; its full live URL has not been independently verified here.
 - Existing database and object files were preserved. The business database contains no fabricated sales or products. Local owner credentials remain in the private ignored `.local/owner-credentials.json` file.
 
 ## Local container details
@@ -20,7 +20,9 @@ For these already-created containers, use the local Docker daemon and start `tem
 
 ## External blockers
 
-The owner selected Vercel for staging. No Vercel credential, linked project or deployment connector is configured. An empty outbound identity manifest and absent hosting CLI configurations were verified. A secure `VERCEL_TOKEN` requirement is saved in the cloud draft for `api.vercel.com`; the next prerequisite is entering that binding through secure environment settings and saving the configuration. See `docs/VERCEL.md`. Do not provide tokens/passwords in chat. Account signup, billing details, domain ownership and real business contact/product data cannot be invented by the agent.
+The owner created `tema-2-staging` using Vercel's GitHub import, selected Prisma Postgres, and deployed. Runtime screenshots show connected PostgreSQL with missing tables. The Vercel build now applies existing migrations and initializes settings on the primary target, preserving existing records; preview builds skip database changes. The repair must still be confirmed against the latest hosted deployment. See `docs/VERCEL.md`.
+
+GitHub-triggered deployment does not require a Vercel API token in this workspace. The running environment has no Vercel credential, linked CLI project or deployment connector, so direct inspection is unavailable. The previously saved token requirement is optional for that inspection. Remote secrets, the first staging administrator, actual image storage, live contact/catalog configuration and the full hosted workflow remain unverified. Do not provide tokens/passwords in chat.
 
 The cloud tools support saving installation/startup drafts and repository references, but do not expose environment publication. Review/save and Publish are product interface actions. The saved draft is not a published environment or a production website deployment.
 

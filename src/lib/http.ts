@@ -4,10 +4,11 @@ import { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { db } from "./db";
 import { AppError } from "./errors";
+import { trustedOrigins } from "./site";
 
 export function mutationGuard(req: NextRequest) {
-  const trusted = new URL(process.env.BETTER_AUTH_URL ?? "http://localhost:3000").origin;
-  if (req.headers.get("origin") !== trusted) throw new AppError("Sorğunun mənbəyi etibarlı deyil.", 403);
+  const origin = req.headers.get("origin");
+  if (!origin || !trustedOrigins().includes(origin)) throw new AppError("Sorğunun mənbəyi etibarlı deyil.", 403);
   if (!req.headers.get("content-type")?.includes("application/json")) throw new AppError("JSON sorğusu tələb olunur.", 415);
 }
 export async function rateLimit(req: NextRequest, scope: string, max = 30) {

@@ -1,23 +1,33 @@
 # Vercel staging deployment
 
-The owner selected their existing Vercel account for staging. Source is already on GitHub (`AdillGasimov/tema-2`, branch `main`). No Vercel deployment has been created yet.
+The owner imported `AdillGasimov/tema-2`, branch `main`, into their existing Vercel account as `tema-2-staging`, connected Prisma Postgres, and deployed it. The first build succeeded, but runtime logs show missing `StoreSettings`, `Product` and `ProductCategory` tables. PostgreSQL is reachable; schema and initial settings preparation were missing.
 
-## Current prerequisite
+## GitHub deployment and account access
 
-The running environment has no Vercel credential or linked Vercel project. A secure `VERCEL_TOKEN` requirement has been added to the cloud configuration draft, scoped to `api.vercel.com`. Enter a deployment token through environment settings and save the configuration; never send it in chat or commit it. Adding a requirement does not supply its value, apply the network change or publish the environment.
+The Vercel GitHub integration can build updates pushed to `main` without a Vercel API credential in this workspace. Open the existing project's Deployments page to inspect the latest commit and build status. The agent has not independently accessed the project's configuration, live URL or runtime logs; current remote evidence is the owner's screenshots.
 
-Once the binding is ready, the agent can verify account access and inspect a matching project before creating a staging project. Use the intended account/team and avoid paid plan changes. Existing configured services should be reused after their metadata and connectivity are checked; an unset variable alone is not evidence that another credential is required.
+Direct API/CLI inspection would need account authentication. An optional secure `VERCEL_TOKEN` requirement remains in the cloud draft, scoped to `api.vercel.com`; it has no saved binding in the running environment. It is not a prerequisite for GitHub-triggered deployments. Never send tokens in chat or commit them. Cloud draft publication and a Vercel website deployment are separate operations.
+
+## Database preparation in the Vercel build
+
+`vercel.json` runs `npm run build:vercel`: generate Prisma Client, run `scripts/prepare-vercel.ts`, then build Next.js. On Vercel's primary target (`VERCEL=1`, `VERCEL_ENV=production`), preparation applies the reviewed SQL migrations with the existing locked/checksummed runner and initializes missing settings/categories/commission policy. Vercel calls this target "production" even when the project is named `tema-2-staging`.
+
+Preparation uses `DATABASE_URL` and fails the build if migration or initialization fails. It never resets the database, overwrites existing settings/accounts or fabricates products/sales. Initial settings use the configured website origin or the Vercel-provided canonical hostname. Initialization is transactional and serialized; rerunning it preserves edited settings and the existing commission policy.
+
+Preview and development builds skip automatic database changes. For a separately managed release job, set `SKIP_DEPLOY_DB_SETUP=1` and run migrations/initialization in that job instead. Review new migration SQL and preserve backups before later business-data releases. The ordinary `npm run build` and Docker build remain independent of a running database.
+
+Database preparation uses `--skip-storage`: it neither creates nor verifies a bucket and does not create an administrator. Those services/accounts need their own verified configuration.
 
 ## Application requirements on Vercel
 
 - Framework: Next.js. `vercel.json` specifies the tested install/build commands and Frankfurt region.
 - Use a persistent PostgreSQL database reachable from Vercel and a private S3-compatible image bucket. The local Docker database/emulator is for local development and cannot be used by a remote Vercel function through loopback addresses.
-- Configure `DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `REFERRAL_SECRET`, `JOB_SECRET`, and S3 settings securely for the staging environment. `BETTER_AUTH_URL` must match the selected staging HTTPS origin. The editable store domain must match it before referral cards are distributed.
+- Configure a direct PostgreSQL `DATABASE_URL`, `BETTER_AUTH_SECRET`, `REFERRAL_SECRET`, `JOB_SECRET`, and S3 settings securely for the staging environment. `BETTER_AUTH_URL`, when set, must be the selected HTTPS origin. Without it, the app uses Vercel's supplied canonical hostname, with only the exact deployment/branch hostnames also accepted for request origins. No wildcard or request-header origin is trusted. The editable store domain must match the intended public origin before referral cards are distributed.
 - Generate independent staging secrets and a separate staging administrator. Do not upload the local owner credential file or reuse production customer data for testing.
-- Apply the reviewed migrations and initialize settings in a trusted job with staging database access. The Next.js build intentionally does not connect to or migrate a business database.
+- Keep build-time database access available for automatic primary-target preparation, or use the explicit release-job option above.
 - Check the account's plan before scheduling periodic jobs. The current maintenance endpoint accepts authenticated POST requests; do not configure a Vercel GET cron against it without implementing and testing a compatible handler. No paid cron plan or external scheduler has been provisioned.
 - Keep Google Sheets disabled until its service account, spreadsheet and network access have been configured and verified.
 
 After deployment, verify `/api/health`, storefront, owner login, actual image uploads, and the order-to-payout acceptance workflow against staging services. A successful upload/build is not proof those functional checks passed. Deployment protection may restrict access to the generated preview URL.
 
-The owner must authenticate their Vercel account or supply its secure deployment binding; the agent cannot invent that authentication or complete account signup/billing on their behalf. No production launch is implied by preparing this staging configuration.
+The staging project has been created and deployed by the owner. A successful hosted repair still needs confirmation from its latest deployment and live storefront; local checks alone do not establish that. Real business launch, paid plan changes and external integration readiness are not implied.
