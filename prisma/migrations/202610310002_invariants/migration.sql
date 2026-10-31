@@ -1,0 +1,15 @@
+ALTER TABLE "User" ADD CONSTRAINT "user_role" CHECK ("role" IN ('ADMIN', 'PARTNER'));
+ALTER TABLE "Product" ADD CONSTRAINT "product_status" CHECK ("status" IN ('DRAFT', 'PUBLISHED', 'ARCHIVED'));
+ALTER TABLE "ProductVariant" ADD CONSTRAINT "stock_nonnegative" CHECK ("stock" >= 0 AND "reserved" >= 0 AND "reserved" <= "stock");
+ALTER TABLE "ProductVariant" ADD CONSTRAINT "prices_valid" CHECK ("costMinor" >= 0 AND "priceMinor" > 0 AND ("discountMinor" IS NULL OR ("discountMinor" >= 0 AND "discountMinor" < "priceMinor")) AND ("commissionMinor" IS NULL OR "commissionMinor" >= 0));
+ALTER TABLE "Partner" ADD CONSTRAINT "partner_code_canonical" CHECK ("code" = UPPER("code") AND "code" ~ '^[A-Z0-9_-]{3,24}$');
+ALTER TABLE "Partner" ADD CONSTRAINT "partner_status" CHECK ("status" IN ('ACTIVE', 'SUSPENDED', 'INACTIVE'));
+ALTER TABLE "Order" ADD CONSTRAINT "order_totals" CHECK ("subtotalMinor" >= 0 AND "totalMinor" = "subtotalMinor" + "deliveryChargedMinor" AND "paidMinor" >= 0 AND "refundedMinor" >= 0 AND "refundedMinor" <= "paidMinor" AND "paidMinor" - "refundedMinor" <= "totalMinor");
+ALTER TABLE "OrderItem" ADD CONSTRAINT "order_item_amounts" CHECK ("quantity" > 0 AND "unitPriceMinor" >= 0 AND "unitCostMinor" >= 0);
+ALTER TABLE "Commission" ADD CONSTRAINT "commission_amount" CHECK ("amountMinor" > 0);
+ALTER TABLE "Commission" ADD CONSTRAINT "commission_status" CHECK ("status" IN ('PENDING', 'APPROVED', 'PAYABLE', 'PAID', 'REVERSED'));
+ALTER TABLE "CommissionAdjustment" ADD CONSTRAINT "adjustment_negative" CHECK ("amountMinor" < 0);
+ALTER TABLE "Payment" ADD CONSTRAINT "payment_amount" CHECK ("amountMinor" > 0 AND "kind" IN ('PAYMENT', 'REFUND'));
+ALTER TABLE "Payout" ADD CONSTRAINT "payout_amount" CHECK ("amountMinor" > 0);
+ALTER TABLE "Expense" ADD CONSTRAINT "expense_amount" CHECK ("amountMinor" > 0);
+CREATE INDEX "reservation_expiry" ON "Order" ("reservationExpiresAt") WHERE "inventoryState" = 'RESERVED';

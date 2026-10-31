@@ -1,0 +1,41 @@
+name: Verify
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: store
+          POSTGRES_PASSWORD: ci-only-disposable
+          POSTGRES_DB: store
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U store -d store" --health-interval 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://store:ci-only-disposable@127.0.0.1:5432/store
+      BETTER_AUTH_URL: http://localhost:3000
+      S3_ENDPOINT: http://127.0.0.1:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: store-images
+      S3_ACCESS_KEY_ID: S3RVER
+      S3_SECRET_ACCESS_KEY: S3RVER
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run local:setup
+      - run: npm run storage:local > /tmp/storage.log 2>&1 &
+      - run: npm run db:generate && npm run db:migrate && npm run db:seed && npm run test:prepare
+      - run: npm run lint && npm run typecheck && npm test && npm run test:integration && npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: PLAYWRIGHT_EXECUTABLE_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')" npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/

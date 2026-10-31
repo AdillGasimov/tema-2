@@ -1,0 +1,74 @@
+{
+  "name": "automotive-commerce",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "prisma generate && next build --webpack",
+    "start": "node scripts/start.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration --maxWorkers=1",
+    "test:e2e": "playwright test",
+    "test:prepare": "tsx scripts/prepare-tests.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/initialize.ts",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "local:setup": "tsx scripts/local-setup.ts",
+    "local:owner": "tsx scripts/local-owner.ts",
+    "storage:local": "tsx scripts/storage.ts",
+    "jobs:sync": "tsx scripts/sync.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@prisma/adapter-pg": "^6.19.0",
+    "@prisma/client": "^6.19.0",
+    "better-auth": "^1.7.14",
+    "dotenv": "^18.0.9",
+    "google-auth-library": "^11.3.2",
+    "lucide-react": "^1.66.0",
+    "next": "^16.4.3",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "recharts": "^3.10.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "@types/pngjs": "^6.0.5",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/s3rver": "^3.7.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.3",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0",
+    "prisma": "^6.19.0",
+    "s3rver": "^3.7.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "npm@11.9.0",
+  "overrides": {
+    "@prisma/config": {
+      "effect": "^3.20.0",
+      "deepmerge-ts": "^8.0.0"
+    }
+  }
+}

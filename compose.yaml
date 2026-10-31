@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: store
+      POSTGRES_DB: store
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run local:setup first}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U store -d store"]
+      interval: 3s
+      retries: 20
+  storage:
+    profiles: ["minio"]
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Run npm run local:setup first}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Run npm run local:setup first}
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    volumes: ["object-data:/data"]
+volumes:
+  postgres-data:
+  object-data:

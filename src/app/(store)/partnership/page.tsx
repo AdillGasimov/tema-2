@@ -1,0 +1,8 @@
+import Link from "next/link";
+import { publicSettings } from "@/lib/settings";
+import { db } from "@/lib/db";
+import { money } from "@/lib/money";
+export default async function Partnership() {
+  const s = await publicSettings(); const rule = await db.commissionRule.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+  return <div className="container content-page prose"><p className="eyebrow">PEŞƏKARLARLA BİRLİKDƏ</p><h1>Tövsiyəniz dəyər qazansın.</h1><p>Avtoyuma, detailing, servis və avtomobil sahəsində çalışan peşəkarlar üçün tərəfdaşlıq proqramı.</p><h2>Necə işləyir?</h2><p>Təsdiqlənmiş tərəfdaşa fərdi kod, referal linki və çap üçün QR kart verilir. Müştəri bu linkdən sifariş etdikdə referal sifarişə əlavə edilir.</p><p>Standart komissiya: uyğun tamamlanmış sifariş üçün {money(rule.amountMinor)}. Minimum məhsul məbləği {money(rule.minimumOrderMinor)}, gözləmə müddəti {rule.holdDays} gündür. Fərdi müqavilə və məhsul qaydaları fərqlənə bilər; sifarişdə həmin vaxtın qaydası saxlanılır.</p><p>Yalnız çatdırılmış, tam ödənilmiş və tamamlanmış sifariş komissiya qazanır. Baxış, QR skanı və WhatsApp pəncərəsinin açılması komissiya yaratmır. Qaytarma və geri ödəniş zamanı düzəliş tətbiq olunur.</p><h2>Şəffaf kabinet</h2><p>Öz sifariş statuslarınızı, komissiyaları, düzəlişləri və ödəniş tarixçəsini şəxsi kabinetinizdə izləyin. Uyğunsuzluq varsa, müraciət göndərin.</p>{s.whatsapp && <a className="btn btn-dark" href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">Tərəfdaşlıq üçün əlaqə</a>}<Link className="btn btn-outline" href="/partner">Tərəfdaş kabineti</Link></div>;
+}
