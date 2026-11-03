@@ -1,29 +1,29 @@
-# Current handoff
+# Current handoff — 2026-11-03
 
-The owner requested that all available setup and publication work be handled automatically.
+The owner requested a working administrator login and restoration of environment changes onto the newer published configuration.
 
-## Completed
+## Environment draft
 
-- Source code is committed and pushed to `https://github.com/AdillGasimov/tema-2` on `main`. Private environment and login files are ignored and were excluded from Git.
-- The Vercel repair passed lint, TypeScript, 31 unit tests, 18 database/storage integration tests, the full Vercel build against a fresh test database with HTTP 200 storefront smoke check, and four Chromium end-to-end tests.
-- Before this follow-up, a real Docker build passed. The resulting `tema-2:staging` image passed a browser smoke test with the existing local owner account, plus database/storage health. The container runs as the non-root Node user. Private `.env` and owner credential files are not embedded in it. That local image has not been rebuilt for the Vercel repair.
-- Local restartable containers are `tema-2-app` (port 3000), `tema-2-storage` (port 9000), and `tema-2-db-1` (PostgreSQL). Published host ports remain loopback-only. The owner separately deployed the Vercel project `tema-2-staging` and supplied `https://tema-2-staging.vercel.app/`.
-- Existing database and object files were preserved. The business database contains no fabricated sales or products. Local owner credentials remain in the private ignored `.local/owner-credentials.json` file.
+The new workspace is connected. The saved draft preserves the published repository selection (`main`), name, credential settings and package-manager preset. It restores installation/startup instructions and adds only `api.vercel.com` and `tema-2-staging.vercel.app` as custom destinations. Instructions contain no credential values.
 
-## Local container details
+The install script locates the existing application checkout, installs frozen dependencies, generates private local configuration and then generates Prisma Client. The complete script passed in the fresh workspace and preserved `.env`. Creating configuration first avoids Prisma falling back to an unnecessary native engine download; TLS and checksum verification remain enabled.
 
-The application uses private `.local/container.env` generated from the existing local configuration. Its database hostname is `db` on the `tema-2_default` Docker network; its S3 endpoint is the storage container's network alias. Do not copy this private file to Git or reuse its local credentials in production.
+Saving a draft does not apply or publish it. Review/save and Publish remain actions in the ChatGPT interface. Current runtime policy is separate from saved configuration.
 
-The local S3 emulator uses the supported path-style setting (`--no-vhost-buckets`), mounted installed dependencies read-only, and `.local/objects` for persistent data. It runs under the workspace user's UID 1000 and binds through a loopback-only host port. The S3 emulator remains a development-only service. Do not substitute it for managed production storage.
+## First live administrator
 
-For these already-created containers, use the local Docker daemon and start `tema-2-db-1`, then `tema-2-storage`, then `tema-2-app` if stopped. Verify application health and the storefront before assuming readiness. If a future machine does not retain the Docker image/containers, use the reproducible source setup in `README.md` and build instructions in `docs/DEPLOYMENT.md`; filesystem snapshots do not establish process or Docker-volume restoration.
+The owner configured `BETTER_AUTH_SECRET` in Vercel and reported that login opens. There is no default live email/password. Primary-target Vercel preparation now supports first-admin creation using private `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12–128 characters). Set both in Vercel Production settings and redeploy the version with this feature. Sign in with those chosen details, remove both temporary variables and redeploy again; the stored account/password hash remains.
 
-## External blockers
+Existing administrators/passwords are preserved. Setup is transactional and serialized, rejects incomplete credentials and existing-email collisions without promotion, and has no public signup endpoint. Preview builds skip setup. See `VERCEL.md` and `OWNER_GUIDE.az.md`.
 
-The owner created `tema-2-staging` using Vercel's GitHub import, selected Prisma Postgres, and deployed. Runtime screenshots show connected PostgreSQL with missing tables. Repair commit `4f5bdba` is pushed to GitHub `main`: the Vercel build now applies existing migrations and initializes settings on the primary target, preserving existing records; preview builds skip database changes. A direct HTTPS check of the supplied live URL was blocked by the cloud environment's outbound proxy (CONNECT 403), not an application response. The repair must still be confirmed against the latest hosted deployment. See `docs/VERCEL.md`.
+## Verification and local runtime
 
-GitHub-triggered deployment does not require a Vercel API token in this workspace. The running environment has no Vercel credential, linked CLI project or deployment connector, so direct inspection is unavailable. The previously saved token requirement is optional for that inspection. Remote secrets, the first staging administrator, actual image storage, live contact/catalog configuration and the full hosted workflow remain unverified. Do not provide tokens/passwords in chat.
+Lint, TypeScript, 31 unit tests, 22 PostgreSQL/storage integration tests and all 4 Chromium acceptance tests passed in the new workspace. A full Vercel build created a test administrator; after setup variables were removed and preparation repeated, Chromium logged in and reached product management. Details are recorded in `PROGRESS.md`.
 
-The cloud tools support saving installation/startup drafts and repository references, but do not expose environment publication. Review/save and Publish are product interface actions. The saved draft is not a published environment or a production website deployment.
+PostgreSQL runs in `tema-2-db-1`; the S3 development emulator uses a retained execution session on port 9000. Private local configuration and generated owner credentials are ignored, mode-restricted files for the development database only. Earlier Docker application-image validation remains historical; that image is not assumed present here. Restart services using the saved startup instructions after each new task. Publication does not preserve processes or establish Docker readiness.
 
-The GitHub API request returned Forbidden, so hosted Actions results were not independently read. Native HTTPS Git authentication supports the verified repository push; another GitHub token was not requested just because API access failed.
+## Hosted limits
+
+The owner deployed `tema-2-staging` through GitHub import and supplied `https://tema-2-staging.vercel.app/`. The previous direct HTTPS check was blocked by outbound policy. This workspace has no Vercel API credential/connector. Native Git uses platform authentication and does not require another token.
+
+Actual live administrator creation/login, remote image storage, contact/catalog configuration and the full hosted business workflow remain unverified until the owner supplies private setup values and the latest deployment is checked. Local tests do not establish hosted readiness. Do not send passwords or tokens in chat.

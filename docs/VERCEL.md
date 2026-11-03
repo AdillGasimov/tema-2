@@ -18,7 +18,24 @@ Preparation uses `DATABASE_URL` and fails the build if migration or initializati
 
 Preview and development builds skip automatic database changes. For a separately managed release job, set `SKIP_DEPLOY_DB_SETUP=1` and run migrations/initialization in that job instead. Review new migration SQL and preserve backups before later business-data releases. The ordinary `npm run build` and Docker build remain independent of a running database.
 
-Database preparation uses `--skip-storage`: it neither creates nor verifies a bucket and does not create an administrator. Those services/accounts need their own verified configuration.
+Database preparation uses `--skip-storage`: it neither creates nor verifies a bucket. The release also checks for opt-in first-administrator configuration after initializing the database.
+
+## Create the first administrator
+
+There are no default live login details. In **Vercel → tema-2-staging → Settings → Environment Variables**, privately add the following for **Production**:
+
+| Variable | Value |
+| --- | --- |
+| `ADMIN_EMAIL` | The email address you want to use to sign in. |
+| `ADMIN_PASSWORD` | A new private password of 12–128 characters. |
+
+Keep these details in your password manager. Save and redeploy the latest version containing first-admin setup. The build log reports **First administrator created** without printing the credentials. Sign in at `https://tema-2-staging.vercel.app/login` with those chosen details. `BETTER_AUTH_SECRET` remains the separate application authentication setting.
+
+After successful login, remove **both** temporary variables and redeploy. The account and password hash remain in PostgreSQL. Older deployment snapshots may retain their original environment; use the new deployment after removal.
+
+`npm run admin:bootstrap` is called only by primary-target Vercel preparation. It uses a serializable transaction and advisory lock. If an administrator exists, it preserves all accounts/passwords and ignores bootstrap values. Changing those variables does not reset a password. With no administrator, missing both variables skips creation, invalid/incomplete values fail, and an email already belonging to any account is rejected without promotion or modification. Preview builds do not provision administrators. No public signup or bootstrap endpoint was added.
+
+With `SKIP_DEPLOY_DB_SETUP=1`, a trusted release job can run `npm run admin:bootstrap` after migrations/initialization instead. The explicit `admin:create` command remains available for additional administrators. Never put credentials in chat, Git or screenshots.
 
 ## Application requirements on Vercel
 

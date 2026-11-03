@@ -18,6 +18,7 @@ if (!connection || !/^postgres(?:ql)?:\/\//.test(connection)) {
 for (const [script, args] of [
   ["scripts/migrate.ts", []],
   ["scripts/initialize.ts", ["--skip-storage"]],
+  ["scripts/bootstrap-admin.ts", []],
 ] as const) {
   const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], { env: process.env, stdio: "inherit" });
   if (result.error) {

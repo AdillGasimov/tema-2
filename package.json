@@ -17,6 +17,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/initialize.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "local:setup": "tsx scripts/local-setup.ts",
     "local:owner": "tsx scripts/local-owner.ts",
     "storage:local": "tsx scripts/storage.ts",

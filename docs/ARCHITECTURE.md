@@ -14,7 +14,7 @@
 
 ## Roles and privacy
 
-Better Auth User/Session/Account/Verification tables hold authentication. ADMIN is provisioned only by trusted CLI; PARTNER is linked one-to-one to a partner profile. Every protected handler and layout checks server sessions. Customer checkout is anonymous. Partner projections exclude customer identity, order addresses, phone, purchase cost and store profits. Admin financial APIs are never public.
+Better Auth User/Session/Account/Verification tables hold authentication. ADMIN is provisioned only by trusted CLI or the opt-in first-admin release script using private `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The release step is serialized and transactional, preserves an existing administrator, rejects email collisions without promoting users, and never resets passwords. No public signup/bootstrap endpoint exists. PARTNER is linked one-to-one to a partner profile. Every protected handler and layout checks server sessions. Customer checkout is anonymous. Partner projections exclude customer identity, order addresses, phone, purchase cost and store profits. Admin financial APIs are never public.
 
 ## Money, orders and inventory
 

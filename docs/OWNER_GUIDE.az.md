@@ -4,6 +4,8 @@
 
 `/login` səhifəsində administrator hesabınıza daxil olun. Lokal mühitdə yaradılmış giriş məlumatları `.local/owner-credentials.json` faylındadır; bu faylı paylaşmayın və Git-ə əlavə etməyin. Canlı mağaza üçün ayrıca şəxsi hesab yaradılmalıdır. Eyni giriş səhifəsini tərəfdaşlar da istifadə edir.
 
+Vercel-də ilk administrator üçün layihənin **Settings → Environment Variables** bölməsində **Production** mühitinə şəxsi `ADMIN_EMAIL` və 12–128 simvolluq `ADMIN_PASSWORD` əlavə edib yenidən deploy edin. Seçdiyiniz e-poçt və parolla daxil olduqdan sonra hər iki müvəqqəti dəyişəni silib yenidən deploy edin; hesab bazada saxlanılır. Mövcud hesabın parolu bu dəyişənlərlə dəyişmir. `BETTER_AUTH_SECRET` tətbiqin ayrıca texniki sirridir. Parolu çatda və ya ekran şəklində paylaşmayın.
+
 **Tənzimləmələr** bölməsində mağazanın adını, domenini, loqosunu, faviconunu və rənglərini dəyişin. Real əlaqə məlumatlarını və WhatsApp nömrəsini ölkə kodu ilə daxil edin. WhatsApp boş olduqda sifariş qəbulu bağlıdır. Ana başlıq, banner şəkli, elan, görünən bölmələr və çatdırılma şərtləri də buradadır. Saxladıqdan sonra dəyişiklikləri mağazada yeniləmə ilə görün; tətbiqin yenidən build edilməsinə ehtiyac yoxdur.
 
 ## Məhsul və anbar
