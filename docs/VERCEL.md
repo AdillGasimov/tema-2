@@ -20,6 +20,14 @@ Preview and development builds skip automatic database changes. For a separately
 
 Database preparation uses `--skip-storage`: it neither creates nor verifies a bucket. The release also checks for opt-in first-administrator configuration after initializing the database.
 
+## Database connection limits
+
+Runtime workers reuse one Prisma client, including production route bundles. Their PostgreSQL pool defaults to **one connection per worker**, releases idle connections after one second, and queues parallel queries within that budget. `DATABASE_POOL_MAX` can explicitly set a budget of 1–10; increase it only after accounting for the provider's total role limit and the number of workers/deployments. The PostgreSQL URL and TLS verification are preserved.
+
+Store settings reads are memoized only within one server-render request, so metadata, layouts and the page share the read. New requests still see administrator edits without a rebuild or persistent-cache invalidation.
+
+The reported `Too many database connections opened` / `too many connections for role "prisma_migration"` error means the configured database role exhausted its total connection budget. The separate SSL-mode warning is not that error. A per-worker pool limit reduces connection use; it does not replace provider-level pooling or a total replica budget for larger deployments. Use the provider's documented application connection/pooling setup for those deployments, and a compatible trusted release connection/job for migrations with session advisory locks. Do not raise role limits, change credentials or weaken TLS merely to hide an application error.
+
 ## Create the first administrator
 
 There are no default live login details. In **Vercel → tema-2-staging → Settings → Environment Variables**, privately add the following for **Production**:

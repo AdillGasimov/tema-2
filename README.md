@@ -39,6 +39,8 @@ The default store has categories and an editable temporary brand, but no product
 
 Tests use the separate `store_test` database and do not modify the development business database. The test fixture changes test settings and adds labeled test products/accounts/transactions. It never resets an existing database. Private test credential files and browser traces are ignored; traces can contain test login values and must not be published publicly.
 
+Connection-budget integration tests use locally generated restricted PostgreSQL roles to reproduce provider limits. The disposable PostgreSQL administrator supplied by Compose/CI can create those roles; production database credentials are not used.
+
 ```sh
 npm run test:prepare
 npm run lint

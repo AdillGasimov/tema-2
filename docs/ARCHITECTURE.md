@@ -26,6 +26,8 @@ Codes normalize to uppercase and are unique. HMAC-signed HttpOnly cookie records
 
 ## Security and integrations
 
+The runtime reuses a process-wide Prisma client in production as well as development. PostgreSQL pools default to one connection per worker and release idle connections promptly. Store-settings memoization is scoped to a render request, sharing reads across metadata/layout/page without retaining private settings between requests or hiding subsequent admin changes. Larger deployments still require provider-level pooling or a replica budget consistent with the database role limit.
+
 Zod schemas reject malformed inputs. Mutations require trusted Origin (except authenticated job endpoint), JSON content type, and persistent rate limits. Better Auth manages password hashing/session cookies and login CSRF protection. Uploads require admin, size limits and actual image decoding/reencoding; S3-compatible storage serves images through a same-origin read route. No SVG uploads. CSV cells are protected from spreadsheet formula injection. Logs do not include secrets or request/customer payloads. Google Sheets is optional; outbox records update the same order row through an idempotent authenticated server integration. It never blocks order creation.
 
 ## Production requirements

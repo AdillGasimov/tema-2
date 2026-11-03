@@ -1,8 +1,11 @@
 import { db } from "./db";
-export async function getSettings() {
+import { cache } from "react";
+// Request-scoped memoization shares ORM reads between metadata/layout/page.
+// A new request still reads fresh settings after an administrator saves them.
+export const getSettings = cache(async function getSettings() {
   return db.storeSettings.findUniqueOrThrow({ where: { id: "store" } });
-}
-export async function publicSettings() {
+});
+export const publicSettings = cache(async function publicSettings() {
   const s = await getSettings();
   // Do not spread this object: future private integration settings must stay server-side.
   return { brandName: s.brandName, domain: s.domain, description: s.description, logoKey: s.logoKey, faviconKey: s.faviconKey,
@@ -11,4 +14,4 @@ export async function publicSettings() {
     heroSubtitle: s.heroSubtitle, heroImageKey: s.heroImageKey, deliveryInfo: s.deliveryInfo, deliveryRegions: s.deliveryRegions,
     deliveryFeeMinor: s.deliveryFeeMinor, freeDeliveryMinor: s.freeDeliveryMinor, showFeatured: s.showFeatured,
     showNewArrivals: s.showNewArrivals, showCategories: s.showCategories };
-}
+});

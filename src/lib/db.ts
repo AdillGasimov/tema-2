@@ -1,8 +1,11 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { databasePoolConfig } from "./db-config";
 const globalDb = globalThis as unknown as { prisma?: PrismaClient };
-export const db = globalDb.prisma ?? new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }), log: ["error"] });
-if (process.env.NODE_ENV !== "production") globalDb.prisma = db;
+export const db = globalDb.prisma ?? new PrismaClient({ adapter: new PrismaPg(databasePoolConfig()), log: ["error"] });
+// Route bundles can load this module separately in the same production worker.
+// Reuse its client there too, rather than opening a fresh pool for every bundle.
+globalDb.prisma = db;
 export type Tx = Prisma.TransactionClient;
 function serializationConflict(error: unknown, depth = 0): boolean {
   if (!error || typeof error !== "object" || depth > 3) return false;

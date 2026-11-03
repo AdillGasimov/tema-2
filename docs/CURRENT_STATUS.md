@@ -18,7 +18,7 @@ Existing administrators/passwords are preserved. Setup is transactional and seri
 
 ## Verification and local runtime
 
-Lint, TypeScript, 31 unit tests, 22 PostgreSQL/storage integration tests and all 4 Chromium acceptance tests passed in the new workspace. A full Vercel build created a test administrator; after setup variables were removed and preparation repeated, Chromium logged in and reached product management. Details are recorded in `PROGRESS.md`.
+Latest connection-limit verification passed lint, TypeScript, 39 unit tests, 23 PostgreSQL/storage integration tests, production build and all 4 Chromium acceptance tests. A production server using a database role limited to two connections handled 24 concurrent storefront/catalog/login/API requests with HTTP 200 and only one application connection. The browser suite also verifies fresh storefront branding immediately after an admin save. Earlier first-admin deployment/login validation is recorded in `PROGRESS.md`.
 
 PostgreSQL runs in `tema-2-db-1`; the S3 development emulator uses a retained execution session on port 9000. Private local configuration and generated owner credentials are ignored, mode-restricted files for the development database only. Earlier Docker application-image validation remains historical; that image is not assumed present here. Restart services using the saved startup instructions after each new task. Publication does not preserve processes or establish Docker readiness.
 
@@ -26,4 +26,4 @@ PostgreSQL runs in `tema-2-db-1`; the S3 development emulator uses a retained ex
 
 The owner deployed `tema-2-staging` through GitHub import and supplied `https://tema-2-staging.vercel.app/`. The previous direct HTTPS check was blocked by outbound policy. This workspace has no Vercel API credential/connector. Native Git uses platform authentication and does not require another token.
 
-Actual live administrator creation/login, remote image storage, contact/catalog configuration and the full hosted business workflow remain unverified until the owner supplies private setup values and the latest deployment is checked. Local tests do not establish hosted readiness. Do not send passwords or tokens in chat.
+The owner has confirmed that the live administrator panel works. The subsequent storefront failure was diagnosed from Vercel logs as database role connection exhaustion. Runtime workers now share a small Prisma pool and settings reads are memoized per request; the latest hosted deployment still needs confirmation. Remote image storage, contact/catalog configuration and the full hosted workflow remain unverified here. Local tests do not establish hosted readiness. Do not send passwords or tokens in chat.
