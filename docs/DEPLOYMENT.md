@@ -4,7 +4,7 @@ The owner has deployed the separate `tema-2-staging` project through Vercel's Gi
 
 ## Required services and configuration
 
-Use Node 24, a managed PostgreSQL 17 database with TLS verification, and a private persistent S3-compatible bucket. Next.js can run on a managed Next.js host or the included Docker image. The runtime must have network access to its database and storage. Do not use ephemeral local filesystem storage in production.
+Use Node 24, a managed PostgreSQL 17 database with TLS verification, and either a private persistent S3-compatible bucket or private Vercel Blob store. Next.js can run on a managed Next.js host or the included Docker image. The runtime must have network access to its database and storage. Do not use ephemeral local filesystem storage in production. Vercel-native private storage setup is documented in `VERCEL.md`.
 
 Set private environment variables using the host's secret manager, following `.env.example`. Generate separate cryptographically random secrets of at least 32 bytes for `BETTER_AUTH_SECRET`, `REFERRAL_SECRET`, and `JOB_SECRET`. Set `BETTER_AUTH_URL` to the exact HTTPS public origin; Vercel can alternatively supply its canonical hostname. Never prefix credentials with `NEXT_PUBLIC_`. The ordinary `npm run build` and Docker build do not require a running database. The primary-target Vercel build also runs database preparation and therefore requires its configured database connection. Provide runtime credentials separately; the Docker build-only placeholders are not defaults in the application.
 

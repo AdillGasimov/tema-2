@@ -28,6 +28,7 @@
     "@pdf-lib/fontkit": "^1.1.1",
     "@prisma/adapter-pg": "^6.19.0",
     "@prisma/client": "^6.19.0",
+    "@vercel/blob": "^2.8.2",
     "better-auth": "^1.7.14",
     "dotenv": "^18.0.9",
     "google-auth-library": "^11.3.2",
@@ -68,6 +69,9 @@
   },
   "packageManager": "npm@11.9.0",
   "overrides": {
+    "@vercel/cli-config": {
+      "zod": "^4.6.7"
+    },
     "@prisma/config": {
       "effect": "^3.20.0",
       "deepmerge-ts": "^8.0.0"

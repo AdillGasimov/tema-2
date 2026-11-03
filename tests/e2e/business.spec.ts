@@ -22,7 +22,7 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   await login(page, f.email, f.password);
   await page.goto("/admin/products"); await page.getByRole("button", { name: "Yeni məhsul", exact: true }).click();
   await page.getByLabel("Məhsulun adı", { exact: true }).fill(name); await page.getByLabel("URL adı (slug)").fill(`e2e-${f.run}`);
-  await page.locator('select[name="categoryId"]').selectOption({ index: 1 }); await page.locator('select[name="status"]').selectOption("PUBLISHED");
+  await page.locator('select[name="categoryId"]').selectOption({ index: 1 }); await page.locator('select[name="status"]').selectOption("DRAFT");
   await page.getByLabel("Məhsul təsviri").fill("E2E yoxlama məhsulu, yalnız təcrid edilmiş test bazasında.");
   await page.getByLabel("SKU", { exact: true }).fill(`E2E-${f.run}`); await page.getByLabel("Stok sayı").fill("10");
   await page.getByLabel("Alış maya dəyəri (AZN)", { exact: true }).fill("5.00"); await page.getByLabel("Satış qiyməti (AZN)", { exact: true }).fill("15.00");
@@ -31,6 +31,16 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   const photo = await sharp({ create: { width: 300, height: 300, channels: 3, background: "#a9c182" } }).png().toBuffer();
   await page.getByLabel("Məhsul şəkilləri", { exact: true }).setInputFiles({ name: "test-towel.png", mimeType: "image/png", buffer: photo });
   await expect(page.locator(".admin-image-grid img")).toBeVisible();
+  const photoPath = await page.locator(".admin-image-grid img").first().getAttribute("src");
+  expect(photoPath).toBeTruthy(); const photoUrl = new URL(photoPath!, page.url()).toString();
+  const privateVisitor = await browser.newContext();
+  expect((await privateVisitor.request.get(photoUrl)).status()).toBe(401);
+  const ownerPhoto = await page.request.get(photoUrl); expect(ownerPhoto.status()).toBe(200);
+  expect(ownerPhoto.headers()["cache-control"]).toBe("private, no-store");
+  await page.locator('select[name="status"]').selectOption("PUBLISHED");
+  const published = page.waitForResponse(r => r.url().endsWith("/api/admin/products") && r.request().method() === "POST");
+  await page.getByRole("button", { name: "Yadda saxla", exact: true }).click(); expect((await published).ok()).toBeTruthy();
+  expect((await privateVisitor.request.get(photoUrl)).status()).toBe(200); await privateVisitor.close();
   await page.goto("/admin/partners"); await page.getByRole("button", { name: "Yeni tərəfdaş", exact: true }).click();
   await page.getByLabel("Ad və soyad", { exact: true }).fill("E2E Tərəfdaş"); await page.getByLabel("Telefon", { exact: true }).fill("+994500004444");
   await page.getByLabel("E-poçt (istəyə bağlı)", { exact: true }).fill(partnerEmail); await page.getByLabel("İlk giriş parolu", { exact: true }).fill(f.password);
@@ -112,4 +122,37 @@ test("all management pages render; rebranding and product changes apply without 
 });
 test("responsive storefront has no horizontal overflow or console errors", async ({ page }) => {
   for (const width of [390, 768, 1440]) { await page.setViewportSize({ width, height: 900 }); await page.goto("/"); await expect(page.getByRole("heading", { level: 1 })).toBeVisible(); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); await page.screenshot({ path: `test-results/storefront-${width}.png`, fullPage: true }); }
+});
+test("upload feedback handles hosted payload errors and refuses oversized files before sending them", async ({ page }) => {
+  const f = fixture(); await login(page, f.email, f.password);
+  let requests = 0;
+  await page.route("**/api/admin/upload", route => { requests++; return route.fulfill({ status: 413, contentType: "text/plain", body: "FUNCTION_PAYLOAD_TOO_LARGE" }); });
+  await page.goto("/admin/products"); await page.getByRole("button", { name: /redaktə et$/ }).first().click();
+  const photo = await sharp({ create: { width: 20, height: 20, channels: 3, background: "green" } }).png().toBuffer();
+  const input = page.getByLabel("Məhsul şəkilləri", { exact: true });
+  await input.setInputFiles({ name: "small.png", mimeType: "image/png", buffer: photo });
+  await expect(page.locator(".image-editor").getByRole("alert")).toContainText("Şəkil ən çox 4 MB ola bilər.");
+  await expect(input).toBeEnabled(); expect(requests).toBe(1);
+  await input.setInputFiles({ name: "large.png", mimeType: "image/png", buffer: Buffer.alloc(4 * 1024 * 1024 + 1) });
+  await expect(input).toBeEnabled();
+  await expect(page.locator(".image-editor").getByRole("alert")).toContainText("Şəkil ən çox 4 MB ola bilər.");
+  expect(requests).toBe(1);
+});
+test("checkout becomes available after the owner configures the WhatsApp number", async ({ page }) => {
+  const f = fixture(); await login(page, f.email, f.password);
+  const initial = await (await page.request.get("/api/admin/settings")).json();
+  const settings = Object.fromEntries(Object.entries(initial.settings).filter(([key]) => !["id", "updatedAt"].includes(key)));
+  const headers = { Origin: "http://localhost:3100" };
+  try {
+    expect((await page.request.post("/api/admin/settings", { headers, data: { settings: { ...settings, whatsapp: "" }, rule: initial.rule } })).ok()).toBeTruthy();
+    await page.addInitScript(() => localStorage.setItem("store-cart-v1", JSON.stringify([{ variantId: "readiness-only", name: "Checkout readiness", variant: "Standart", priceMinor: 100, quantity: 1, slug: "readiness-only" }])));
+    await page.goto("/checkout");
+    await expect(page.getByText("Sifariş qəbulu hələ aktiv deyil.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sifariş ver", exact: true })).toBeDisabled();
+    expect((await page.request.post("/api/admin/settings", { headers, data: { settings, rule: initial.rule } })).ok()).toBeTruthy();
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Sifariş ver", exact: true })).toBeEnabled();
+  } finally {
+    expect((await page.request.post("/api/admin/settings", { headers, data: { settings, rule: initial.rule } })).ok()).toBeTruthy();
+  }
 });

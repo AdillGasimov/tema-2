@@ -13,11 +13,15 @@ Vercel-də ilk administrator üçün layihənin **Settings → Environment Varia
 1. **Kateqoriyalar** bölməsində kateqoriya və lazım olsa alt kateqoriya yaradın. Ana səhifədə göstərmək üçün uyğun xananı işarələyin.
 2. **Məhsullar → Yeni məhsul** seçin. Ad, URL üçün kiçik latın hərfləri ilə slug, təsvir, kateqoriya və SKU daxil edin.
 3. Hər variant üçün alış maya dəyərini, satış qiymətini, stok sayını və istəyə bağlı endirimli qiyməti AZN ilə yazın. Ölçü, rəng və paket sayını variant adı ilə ifadə edə bilərsiniz. Maya dəyəri müştəriyə və tərəfdaşa göstərilmir.
-4. Məhsulu saxlayın, sonra şəkillərini yükləyin. JPG, PNG və WebP qəbul edilir; hər fayl ən çox 8 MB-dır. Şəkillər yoxlanılır və WebP-yə çevrilir. Bir məhsulda ən çox 12 şəkil ola bilər. Real məhsul fotoşəkillərindən istifadə edin.
+4. Məhsulu saxlayın, sonra şəkillərini yükləyin. JPG, PNG və WebP qəbul edilir; hər fayl ən çox 4 MB-dır. Şəkillər yoxlanılır və WebP-yə çevrilir. Bir məhsulda ən çox 12 şəkil ola bilər. Real məhsul fotoşəkillərindən istifadə edin.
 5. Statusu **Yayımlanıb** edin. **Seçilmiş məhsul** xanası onu ana səhifədə göstərə bilər. Qaralama və arxiv məhsulları açıq kataloqda görünmür. Cədvəldə məhsulları seçərək statusu toplu dəyişə bilərsiniz. Surət düyməsi məhsulu yeni SKU/slug ilə yaratmağa kömək edir.
 6. **Anbar** bölməsində artım üçün müsbət, azalma üçün mənfi say və səbəb daxil edin. Rezervdən az stok yazmaq mümkün deyil. Stok hərəkətləri jurnalda qalır.
 
 Müştəri sifarişi 30 dəqiqəlik rezerv yaradır. Sadəcə WhatsApp pəncərəsinin açılması stoku satılmış etmir. Admin təsdiqi stoku çıxır; ləğv rezervi azad edir və ya çıxılmış stoku qaytarır. Bütün sifarişin fiziki qaytarılması ayrıca **Qaytarılıb** statusudur. Pulun geri ödənilməsi ayrıca maliyyə əməliyyatıdır.
+
+**“Şəkil yaddaşı konfiqurasiya edilməyib”** xətası olduqda Vercel layihəsinin **Storage → Blob** bölməsində **Private** yaddaş yaradın və ya mövcud private yaddaşı layihənin **Production** mühitinə qoşun. Vercel `BLOB_READ_WRITE_TOKEN` dəyişənini təqdim edir. Son versiyanı yenidən deploy edin. Mövcud S3 yaddaşı ilə işləyirsinizsə, onun dəyişənləri `docs/VERCEL.md` sənədindədir; saxlanmış şəkilləri köçürmədən yaddaş növünü dəyişməyin.
+
+**“Sifariş qəbulu hələ aktiv deyil”** yazısı **Tənzimləmələr → WhatsApp nömrəsi** sahəsi boş olduqda görünür. Həqiqi iş nömrənizi ölkə kodu ilə yazın, **Bütün tənzimləmələri saxla** düyməsinə basın və sifariş səhifəsini yeniləyin. Bu dəyişiklik deploy tələb etmir.
 
 ## Tərəfdaş və QR kart
 

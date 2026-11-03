@@ -48,7 +48,7 @@ With `SKIP_DEPLOY_DB_SETUP=1`, a trusted release job can run `npm run admin:boot
 ## Application requirements on Vercel
 
 - Framework: Next.js. `vercel.json` specifies the tested install/build commands and Frankfurt region.
-- Use a persistent PostgreSQL database reachable from Vercel and a private S3-compatible image bucket. The local Docker database/emulator is for local development and cannot be used by a remote Vercel function through loopback addresses.
+- Use a persistent PostgreSQL database reachable from Vercel and either a private Vercel Blob store or a private S3-compatible image bucket. The local Docker database/emulator is for local development and cannot be used by a remote Vercel function through loopback addresses.
 - Configure a direct PostgreSQL `DATABASE_URL`, `BETTER_AUTH_SECRET`, `REFERRAL_SECRET`, `JOB_SECRET`, and S3 settings securely for the staging environment. `BETTER_AUTH_URL`, when set, must be the selected HTTPS origin. Without it, the app uses Vercel's supplied canonical hostname, with only the exact deployment/branch hostnames also accepted for request origins. No wildcard or request-header origin is trusted. The editable store domain must match the intended public origin before referral cards are distributed.
 - Generate independent staging secrets and a separate staging administrator. Do not upload the local owner credential file or reuse production customer data for testing.
 - Keep build-time database access available for automatic primary-target preparation, or use the explicit release-job option above.
@@ -56,5 +56,21 @@ With `SKIP_DEPLOY_DB_SETUP=1`, a trusted release job can run `npm run admin:boot
 - Keep Google Sheets disabled until its service account, spreadsheet and network access have been configured and verified.
 
 After deployment, verify `/api/health`, storefront, owner login, actual image uploads, and the order-to-payout acceptance workflow against staging services. A successful upload/build is not proof those functional checks passed. Deployment protection may restrict access to the generated preview URL.
+
+## Connect private image storage
+
+PostgreSQL stores product records; image bytes need their own persistent storage. The app reports `Şəkil yaddaşı konfiqurasiya edilməyib.` when neither usable storage configuration is present.
+
+For the Vercel-native option, open the project's **Storage → Blob**, create or connect a **Private** store, and connect it to this project's **Production** environment. Vercel supplies `BLOB_READ_WRITE_TOKEN`; keep it private and redeploy the latest application after connecting. The official SDK also supports an existing store-scoped `BLOB_STORE_ID` / `VERCEL_OIDC_TOKEN` binding. A token/store declaration is not proof of successful access; verify an actual image upload after deployment.
+
+The adapter writes only private objects with immutable UUID paths, normalizes images to WebP, and serves bytes through the existing authorization-checked `/api/media` route. Direct private-store URLs/tokens are not sent to browsers. Expense attachments and draft product images still require administrator access.
+
+Existing S3 setups continue to use `S3_BUCKET`, `S3_REGION`, optional `S3_ENDPOINT`, and either the normal AWS credential chain or private `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`. A configured `S3_BUCKET` takes precedence over Blob. Select one provider for the image namespace; switching providers without copying existing objects would leave old image references unavailable. No bucket/store is created by the build.
+
+Uploads accept JPG, PNG or WebP up to **4 MiB** each, with bounded multipart overhead below Vercel's function request ceiling. The client rejects larger files before sending them and handles non-JSON 413 responses. The server enforces the body bound even when `Content-Length` is absent or incorrect, then decodes/reencodes the actual image. The `/api/health` storage check supports either provider.
+
+## Enable checkout
+
+In **Admin → Tənzimləmələr → WhatsApp nömrəsi**, enter the real business number with country code, save all settings, and refresh checkout. A blank number intentionally closes order acceptance in both the UI and server. Saving it takes effect on new requests without a rebuild. Checkout records an unpaid order and opens WhatsApp for manual confirmation; opening WhatsApp does not mark an order paid or completed.
 
 The staging project has been created and deployed by the owner. A successful hosted repair still needs confirmation from its latest deployment and live storefront; local checks alone do not establish that. Real business launch, paid plan changes and external integration readiness are not implied.
