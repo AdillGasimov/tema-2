@@ -10,7 +10,8 @@ export const bucket = () => { if (!process.env.S3_BUCKET) throw new AppError("Ş
 export const validImageKey = (key: string) => /^images\/[a-f0-9-]{36}\.webp$/.test(key);
 export function imageStorageProvider(env: Record<string, string | undefined> = process.env): "s3" | "vercel-blob" {
   if (env.S3_BUCKET) return "s3";
-  if (env.BLOB_READ_WRITE_TOKEN || (env.BLOB_STORE_ID && env.VERCEL_OIDC_TOKEN)) return "vercel-blob";
+  // The SDK resolves OIDC from Vercel's trusted request context as well as env.
+  if (env.BLOB_READ_WRITE_TOKEN || env.BLOB_STORE_ID) return "vercel-blob";
   throw new AppError("Şəkil yaddaşı konfiqurasiya edilməyib.", 503);
 }
 async function privateBlob<T>(operation: () => Promise<T>): Promise<T> {

@@ -8,7 +8,7 @@ The Vercel GitHub integration can build updates pushed to `main` without a Verce
 
 The owner supplied the website URL `https://tema-2-staging.vercel.app/`. This environment's outbound proxy blocks that hostname (CONNECT 403), so an attempted HTTPS check could not determine the application's response. Repair commit `4f5bdba` is pushed to `main`; confirm the latest deployment reaches Ready, then open Visit.
 
-Direct API/CLI inspection would need account authentication. An optional secure `VERCEL_TOKEN` requirement remains in the cloud draft, scoped to `api.vercel.com`; it has no saved binding in the running environment. It is not a prerequisite for GitHub-triggered deployments. Never send tokens in chat or commit them. Cloud draft publication and a Vercel website deployment are separate operations.
+Direct API/CLI inspection would need account authentication, which is not configured in this task. It is not a prerequisite for GitHub-triggered deployments. Never send tokens in chat or commit them. Cloud draft publication and a Vercel website deployment are separate operations.
 
 ## Database preparation in the Vercel build
 
@@ -61,7 +61,7 @@ After deployment, verify `/api/health`, storefront, owner login, actual image up
 
 PostgreSQL stores product records; image bytes need their own persistent storage. The app reports `Şəkil yaddaşı konfiqurasiya edilməyib.` when neither usable storage configuration is present.
 
-For the Vercel-native option, open the project's **Storage → Blob**, create or connect a **Private** store, and connect it to this project's **Production** environment. Vercel supplies `BLOB_READ_WRITE_TOKEN`; keep it private and redeploy the latest application after connecting. The official SDK also supports an existing store-scoped `BLOB_STORE_ID` / `VERCEL_OIDC_TOKEN` binding. A token/store declaration is not proof of successful access; verify an actual image upload after deployment.
+For the Vercel-native option, open the project's **Storage → Blob**, create or connect a **Private** store, and connect it to this project's **Production** environment. Current connections can supply `BLOB_STORE_ID` and `BLOB_WEBHOOK_PUBLIC_KEY` without a read-write token. The official SDK resolves OIDC authentication from Vercel's trusted request context, with `VERCEL_OIDC_TOKEN` as an environment fallback. The application selects Blob when the store ID is present and lets the SDK authenticate each operation; it does not require the request-scoped identity to be duplicated in environment variables. `BLOB_WEBHOOK_PUBLIC_KEY` is not an access credential. Existing `BLOB_READ_WRITE_TOKEN` configurations remain supported. Redeploy the latest application after connecting, keep credentials private, and verify an actual image upload: a store declaration alone is not proof of successful access.
 
 The adapter writes only private objects with immutable UUID paths, normalizes images to WebP, and serves bytes through the existing authorization-checked `/api/media` route. Direct private-store URLs/tokens are not sent to browsers. Expense attachments and draft product images still require administrator access.
 

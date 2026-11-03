@@ -19,7 +19,7 @@ Vercel-də ilk administrator üçün layihənin **Settings → Environment Varia
 
 Müştəri sifarişi 30 dəqiqəlik rezerv yaradır. Sadəcə WhatsApp pəncərəsinin açılması stoku satılmış etmir. Admin təsdiqi stoku çıxır; ləğv rezervi azad edir və ya çıxılmış stoku qaytarır. Bütün sifarişin fiziki qaytarılması ayrıca **Qaytarılıb** statusudur. Pulun geri ödənilməsi ayrıca maliyyə əməliyyatıdır.
 
-**“Şəkil yaddaşı konfiqurasiya edilməyib”** xətası olduqda Vercel layihəsinin **Storage → Blob** bölməsində **Private** yaddaş yaradın və ya mövcud private yaddaşı layihənin **Production** mühitinə qoşun. Vercel `BLOB_READ_WRITE_TOKEN` dəyişənini təqdim edir. Son versiyanı yenidən deploy edin. Mövcud S3 yaddaşı ilə işləyirsinizsə, onun dəyişənləri `docs/VERCEL.md` sənədindədir; saxlanmış şəkilləri köçürmədən yaddaş növünü dəyişməyin.
+**“Şəkil yaddaşı konfiqurasiya edilməyib”** xətası olduqda Vercel layihəsinin **Storage → Blob** bölməsində **Private** yaddaş yaradın və ya mövcud private yaddaşı layihənin **Production** mühitinə qoşun. Vercel qoşulma üsulundan asılı olaraq `BLOB_STORE_ID` və ya `BLOB_READ_WRITE_TOKEN` təqdim edə bilər. `BLOB_STORE_ID` ilə tətbiq Vercel-in təqdim etdiyi kimlikdən SDK vasitəsilə istifadə edir; ayrıca token əlavə etmək tələb olunmur. Son versiyanı yenidən deploy edin. Mövcud S3 yaddaşı ilə işləyirsinizsə, onun dəyişənləri `docs/VERCEL.md` sənədindədir; saxlanmış şəkilləri köçürmədən yaddaş növünü dəyişməyin.
 
 **“Sifariş qəbulu hələ aktiv deyil”** yazısı **Tənzimləmələr → WhatsApp nömrəsi** sahəsi boş olduqda görünür. Həqiqi iş nömrənizi ölkə kodu ilə yazın, **Bütün tənzimləmələri saxla** düyməsinə basın və sifariş səhifəsini yeniləyin. Bu dəyişiklik deploy tələb etmir.
 

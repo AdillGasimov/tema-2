@@ -13,8 +13,10 @@ afterEach(() => vi.unstubAllEnvs());
 describe("private Vercel image storage", () => {
   it("supports configured Blob token/OIDC access and keeps an existing S3 bucket selected", () => {
     expect(imageStorageProvider({ BLOB_READ_WRITE_TOKEN: "mock" })).toBe("vercel-blob");
+    expect(imageStorageProvider({ BLOB_STORE_ID: "mock" })).toBe("vercel-blob");
     expect(imageStorageProvider({ BLOB_STORE_ID: "mock", VERCEL_OIDC_TOKEN: "mock" })).toBe("vercel-blob");
     expect(imageStorageProvider({ S3_BUCKET: "existing", BLOB_READ_WRITE_TOKEN: "mock" })).toBe("s3");
+    expect(imageStorageProvider({ S3_BUCKET: "existing", BLOB_STORE_ID: "mock" })).toBe("s3");
     expect(() => imageStorageProvider({})).toThrow("Şəkil yaddaşı konfiqurasiya edilməyib.");
   });
   it("decodes images and writes only private, non-overwriting WebP objects", async () => {
