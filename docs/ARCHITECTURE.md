@@ -8,6 +8,7 @@
 - `/api/referrals`: verifies active codes and sets signed, HttpOnly attribution cookie; direct visits preserve the previous code until expiry.
 - `/api/orders`: public validated checkout with idempotency and stock reservations, database persistence before WhatsApp URL generation.
 - `/api/admin/*`: role-checked product/category/inventory/order/partner/commission/payout/expense/settings/dispute operations, reports and uploads.
+- `/api/admin/product-import`: bounded JSON carrying UTF-8 CSV, administrator-only preview and explicit import. At most 50 rows/512 KiB; existing categories, SKUs and slugs are rechecked at commit. Imports create drafts with grouped variants, inventory movements and per-product audits in one serializable transaction. An actor-scoped deterministic audit receipt makes retries idempotent without a new table; it is committed atomically with products and rejects changed payloads under the same key. Existing products and reserved stock are never updated by this endpoint. Photo uploads use the existing media workflow after import.
 - `/api/partner/*`: session partner ID only, never caller-supplied ownership. Own redacted orders, commission/payout/adjustment history and disputes.
 - `/api/cards/*`: authorized owner/admin QR and PDF downloads.
 - `/api/jobs/sync`: bearer-authenticated retry worker for a durable Google Sheets outbox.

@@ -4,7 +4,7 @@ The owner imported `AdillGasimov/tema-2`, branch `main`, into their existing Ver
 
 ## GitHub deployment and account access
 
-The Vercel GitHub integration can build updates pushed to `main` without a Vercel API credential in this workspace. Open the existing project's Deployments page to inspect the latest commit and build status. The agent has not independently accessed the project's configuration, live URL or runtime logs; current remote evidence is the owner's screenshots.
+The Vercel GitHub integration can build updates pushed to `main` without a Vercel API credential in this workspace. Open the existing project's Deployments page to inspect the latest commit and build status. The current runtime can also read GitHub's Vercel commit status and the live site's public HTTP responses. Project configuration, authenticated administrator actions and private runtime logs still require the owner's account.
 
 The owner supplied the website URL `https://tema-2-staging.vercel.app/`. This environment's outbound proxy blocks that hostname (CONNECT 403), so an attempted HTTPS check could not determine the application's response. Repair commit `4f5bdba` is pushed to `main`; confirm the latest deployment reaches Ready, then open Visit.
 

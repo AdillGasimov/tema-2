@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Birmarket Product CSV Exporter",
+  "version": "1.0.0",
+  "description": "Save products you open on Birmarket and export names, specifications and photo URLs to CSV.",
+  "permissions": ["scripting", "storage", "downloads"],
+  "host_permissions": ["https://birmarket.az/*", "https://www.birmarket.az/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "Birmarket Product CSV Exporter" },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'" },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+}

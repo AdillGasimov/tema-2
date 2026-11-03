@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { PNG } from "pngjs";
 import jsQR from "jsqr";
 import sharp from "sharp";
+import { csv } from "../../src/lib/csv";
 type Fixture = { run: string; email: string; password: string; otherId: string; otherEmail: string; foreignId: string; foreignCode: string };
 const fixture = (): Fixture => JSON.parse(readFileSync(".local/e2e.json", "utf8"));
 async function login(page: Page, email: string, password: string) {
@@ -155,4 +156,56 @@ test("checkout becomes available after the owner configures the WhatsApp number"
   } finally {
     expect((await page.request.post("/api/admin/settings", { headers, data: { settings, rule: initial.rule } })).ok()).toBeTruthy();
   }
+});
+
+test("CSV template, preview and confirmed import create drafts with variants and block duplicate reuploads", async ({ page }) => {
+  const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
+  const initial = await (await page.request.get("/api/admin/products")).json();
+  const name = `CSV dəsmal ${f.run}`, slug = `csv-browser-${f.run}`;
+  const input = csv([["name", "sku", "price", "cost", "stock", "slug", "variant", "description"],
+    [name, `CSV-GREEN-${f.run}`, "14.99", "8.50", "7", slug, "Yaşıl", "Nəmi hopduran dəsmal."],
+    [name, `CSV-GREY-${f.run}`, "15.99", "9.50", "4", slug, "Boz", "Nəmi hopduran dəsmal."]]);
+  await page.getByRole("button", { name: "CSV idxalı", exact: true }).click();
+  const panel = page.locator(".csv-import");
+  const download = page.waitForEvent("download"); await panel.getByRole("button", { name: "CSV şablonunu yüklə" }).click();
+  const template = await download; expect(template.suggestedFilename()).toBe("mehsul-idxal-sablonu.csv");
+  expect(readFileSync((await template.path())!, "utf8")).toContain("Satış AZN");
+  await panel.getByLabel("Ümumi kateqoriya", { exact: true }).selectOption(initial.categories[0].id);
+  await panel.getByLabel("CSV faylı", { exact: true }).setInputFiles({ name: "products.csv", mimeType: "text/csv", buffer: Buffer.from(input) });
+  await panel.getByRole("button", { name: "Faylı yoxla", exact: true }).click();
+  await expect(panel.getByRole("heading", { name: "İdxal önizləməsi" })).toBeVisible();
+  await expect(panel.getByText("1 məhsul · 2 variant · Qaralama", { exact: true })).toBeVisible();
+  expect((await (await page.request.get("/api/admin/products")).json()).products.some((p: { slug: string }) => p.slug === slug)).toBe(false);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const saved = page.waitForResponse(r => r.url().endsWith("/api/admin/product-import") && r.request().postDataJSON()?.mode === "import");
+  await panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true }).click(); expect((await saved).ok()).toBeTruthy();
+  await expect(panel.getByRole("status")).toContainText("1 məhsul və 2 variant qaralama kimi əlavə edildi");
+  const created = (await (await page.request.get("/api/admin/products")).json()).products.find((p: { slug: string }) => p.slug === slug);
+  expect(created.status).toBe("DRAFT"); expect(created.variants).toHaveLength(2);
+  expect(created.variants.map((v: { stock: number }) => v.stock).sort()).toEqual([4, 7]);
+  expect((await (await page.request.get(`/api/catalog?q=${encodeURIComponent(name)}`)).json()).total).toBe(0);
+  await panel.getByRole("button", { name: "Faylı yoxla", exact: true }).click();
+  await expect(panel.getByRole("alert")).toContainText("SKU artıq mağazada var");
+  await expect(panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true })).toBeDisabled();
+  const invalid = input.replace('"7"', '""');
+  await panel.getByLabel("CSV faylı", { exact: true }).setInputFiles({ name: "invalid.csv", mimeType: "text/csv", buffer: Buffer.from(invalid) });
+  await panel.getByRole("button", { name: "Faylı yoxla", exact: true }).click();
+  await expect(panel.getByRole("alert")).toContainText("Stok sahəsi boşdur");
+  await expect(panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true })).toBeDisabled();
+});
+
+test("CSV import API enforces roles, origin, body bounds and confirmation fields", async ({ page, browser }) => {
+  const f = fixture(); await login(page, f.email, f.password);
+  const headers = { Origin: "http://localhost:3100" };
+  const input = { mode: "preview", csv: "name,sku,price,cost,stock\nCSV,X,1,0,0" };
+  const guest = await browser.newContext();
+  expect((await guest.request.post("/api/admin/product-import", { headers, data: input })).status()).toBe(401); await guest.close();
+  const partnerContext = await browser.newContext(); const partnerPage = await partnerContext.newPage(); await login(partnerPage, f.otherEmail, f.password);
+  expect((await partnerPage.request.post("/api/admin/product-import", { headers, data: input })).status()).toBe(403); await partnerContext.close();
+  expect((await page.request.post("/api/admin/product-import", { headers: { Origin: "https://outside.example" }, data: input })).status()).toBe(403);
+  expect((await page.request.post("/api/admin/product-import", { headers: { ...headers, "Content-Type": "text/plain" }, data: "anything" })).status()).toBe(415);
+  expect((await page.request.post("/api/admin/product-import", { headers, data: { ...input, mode: "import" } })).status()).toBe(400);
+  expect((await page.request.post("/api/admin/product-import", { headers, data: { ...input, csv: "x".repeat(1024 * 1024 + 8192) } })).status()).toBe(413);
+  expect((await page.request.post("/api/admin/product-import", { headers: { ...headers, "Content-Type": "application/json" }, data: "broken JSON" })).status()).toBe(400);
 });

@@ -35,6 +35,8 @@ Open the running application's `/` page, `/login` for accounts, `/admin` for adm
 
 The default store has categories and an editable temporary brand, but no products, phone number or business transactions. Log in, configure the real WhatsApp number, then add and publish products. For an explicit administrator instead of the local helper, securely set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your private shell and run `npm run admin:create`; clear the variables afterwards. See `.env.example`. Never paste credentials into chat or commit `.env`.
 
+For bulk entry, **Admin → Məhsullar → CSV idxalı** provides a downloadable Excel/Google Sheets template, a preview with row errors, and confirmed draft creation. Import up to 50 UTF-8 CSV rows/512 KiB per batch with descriptions, existing categories, variants, AZN prices/costs and explicit stock. Duplicate SKUs/slugs are rejected, retries are idempotent and a batch saves atomically with stock/audit records. Add photos through the existing editor, then publish reviewed drafts. See the owner's guide for columns and examples.
+
 ## Verification
 
 Tests use the separate `store_test` database and do not modify the development business database. The test fixture changes test settings and adds labeled test products/accounts/transactions. It never resets an existing database. Private test credential files and browser traces are ignored; traces can contain test login values and must not be published publicly.
@@ -62,10 +64,11 @@ Prisma 6's experimental migration adapter cannot deserialize PostgreSQL's intern
 - [Production deployment, backups, worker and current limits](docs/DEPLOYMENT.md).
 - [Implementation plan](IMPLEMENTATION_PLAN.md) and [verified progress](PROGRESS.md).
 - [Current automation and deployment status](docs/CURRENT_STATUS.md).
+- [Birmarket Chrome product exporter](extensions/birmarket-product-exporter/README.md): collect opened product pages and export full data/photo links or store-compatible CSV batches.
 - [Vercel staging deployment and database preparation](docs/VERCEL.md).
 
 The owner has imported and deployed `tema-2-staging` through Vercel's GitHub integration. `vercel.json` runs `npm run build:vercel`, which applies migrations and initializes missing settings on the primary Vercel target before building. Preview builds skip database changes. The ordinary local/Docker build does not require a database. See the Vercel guide for the release-job opt-out and remaining service checks.
 
 There is no default live administrator login. To create the first account, privately set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12–128 characters) for the Vercel project's Production environment and redeploy. Sign in with the chosen email/password, remove both temporary variables and redeploy again; the account remains in PostgreSQL. Setup preserves any existing administrator and never resets passwords or promotes another existing user. See [first-admin setup](docs/VERCEL.md#create-the-first-administrator).
 
-Google Sheets requires an optional service account and spreadsheet and remains disabled by default. Image storage must be a persistent private S3-compatible bucket or private Vercel Blob store. Connect Vercel Blob through the project's Storage panel and redeploy with its private `BLOB_READ_WRITE_TOKEN`; see the Vercel guide. JPG, PNG and WebP uploads are limited to 4 MiB. Checkout requires the owner's WhatsApp number in admin settings. The included local emulator is development-only. External services, backups, legal policy and operational review still need the owner's configuration. The staging deployment does not establish readiness for a real business launch.
+Google Sheets requires an optional service account and spreadsheet and remains disabled by default. Image storage must be a persistent private S3-compatible bucket or private Vercel Blob store. Connect Vercel Blob through the project's Storage panel and redeploy with its store-ID/OIDC binding or existing private read-write token; see the Vercel guide. JPG, PNG and WebP uploads are limited to 4 MiB. Checkout requires the owner's WhatsApp number in admin settings. The included local emulator is development-only. External services, backups, legal policy and operational review still need the owner's configuration. The staging deployment does not establish readiness for a real business launch.

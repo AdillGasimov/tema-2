@@ -19,6 +19,19 @@ Vercel-də ilk administrator üçün layihənin **Settings → Environment Varia
 
 Müştəri sifarişi 30 dəqiqəlik rezerv yaradır. Sadəcə WhatsApp pəncərəsinin açılması stoku satılmış etmir. Admin təsdiqi stoku çıxır; ləğv rezervi azad edir və ya çıxılmış stoku qaytarır. Bütün sifarişin fiziki qaytarılması ayrıca **Qaytarılıb** statusudur. Pulun geri ödənilməsi ayrıca maliyyə əməliyyatıdır.
 
+### CSV ilə toplu məhsul əlavə etmək
+
+1. **Məhsullar → CSV idxalı → CSV şablonunu yüklə** seçin. Şablon yalnız sütun başlıqlarını ehtiva edir; sətirləri öz real məhsullarınızla doldurun.
+2. Excel və ya Google Sheets-də **Məhsul, SKU, Satış AZN, Maya AZN, Stok** sütunlarını doldurun. Qiymətlər AZN ilədir: `14.99` və ya `14,99`. Maya dəyərini və stoku boş qoymayın. `0` yalnız həqiqi dəyər sıfır olduqda yazılmalıdır.
+3. **Kateqoriya** sütununda mağazadakı mövcud kateqoriyanın adını və ya URL adını istifadə edin. Bütün sətirlər eyni kateqoriyadırsa, sütunu boş saxlayıb idxal ekranında **Ümumi kateqoriya** seçə bilərsiniz. Yeni kateqoriyanı əvvəlcə **Kateqoriyalar** bölməsində yaradın.
+4. **Təsvir, URL adı, Variant, Endirim AZN** istəyə bağlıdır. URL adı boşdursa addan hazırlanır, variant boşdursa **Standart** olur. Eyni URL adı olan sətirlər bir məhsulun variantları sayılır: məhsul adı, təsvir və kateqoriya eyni, SKU və variant adları fərqli olmalıdır. Bir məhsulda ən çox 30 variant qəbul edilir.
+5. Cədvəli **CSV UTF-8** kimi saxlayın. Vergül, nöqtəli vergül və tab ayırıcıları qəbul edilir. Fayl ən çox **512 KB və 50 məhsul/variant sətiri** ola bilər. Daha böyük kataloqu ayrı fayllara bölün. Excel-in `.xlsx` formatını sadəcə `.csv` olaraq adlandırmaq kifayət etmir.
+6. Faylı seçib **Faylı yoxla** düyməsinə basın. Bu mərhələ məhsul yaratmır. Xətalarda göstərilən sətirləri düzəldib yenidən yoxlayın. SKU və URL adları mağazada artıq varsa idxal saxlanılmır; mövcud məhsulları öz redaktorundan dəyişin.
+7. Qiymətləri, maya dəyərini və stoku önizləmədə yoxlayıb **Qaralamaları əlavə et** seçin. Bütün fayl bir əməliyyatla saxlanılır; xəta olarsa natamam məhsullar qalmır. Eyni sorğunu təkrar göndərmək əlavə stok və ya məhsul yaratmır.
+8. Məhsulları redaktə edib real şəkillərini adi şəkil yükləyicisi ilə əlavə edin. Hazır məhsulları seçərək toplu **Yayımla** tətbiq edə bilərsiniz. CSV idxalı şəkil URL-lərini və ya başqa saytın səhifələrini avtomatik yükləmir.
+
+İngilis sütunları ilə hazırlanmış fayllar da qəbul edilir: `name, sku, price, cost, stock, category, description, slug, variant, discount`. Başlıqdan sonrakı hər sətir bir variantdır. CSV-də əlavə naməlum sütun varsa, öncə onu çıxarın və ya başlığını şablona uyğunlaşdırın.
+
 **“Şəkil yaddaşı konfiqurasiya edilməyib”** xətası olduqda Vercel layihəsinin **Storage → Blob** bölməsində **Private** yaddaş yaradın və ya mövcud private yaddaşı layihənin **Production** mühitinə qoşun. Vercel qoşulma üsulundan asılı olaraq `BLOB_STORE_ID` və ya `BLOB_READ_WRITE_TOKEN` təqdim edə bilər. `BLOB_STORE_ID` ilə tətbiq Vercel-in təqdim etdiyi kimlikdən SDK vasitəsilə istifadə edir; ayrıca token əlavə etmək tələb olunmur. Son versiyanı yenidən deploy edin. Mövcud S3 yaddaşı ilə işləyirsinizsə, onun dəyişənləri `docs/VERCEL.md` sənədindədir; saxlanmış şəkilləri köçürmədən yaddaş növünü dəyişməyin.
 
 **“Sifariş qəbulu hələ aktiv deyil”** yazısı **Tənzimləmələr → WhatsApp nömrəsi** sahəsi boş olduqda görünür. Həqiqi iş nömrənizi ölkə kodu ilə yazın, **Bütün tənzimləmələri saxla** düyməsinə basın və sifariş səhifəsini yeniləyin. Bu dəyişiklik deploy tələb etmir.
