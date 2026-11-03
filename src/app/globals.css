@@ -12,3 +12,6 @@
 
 /* Product CSV import */
 .catalog-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.csv-import>p,.csv-help p{font-size:13px;line-height:1.8}.csv-import>.catalog-actions,.csv-import>.form-grid,.csv-help{margin:20px 0}.csv-import .panel-heading h2{display:flex;align-items:center;gap:10px}.csv-help summary{cursor:pointer;font-size:13px;font-weight:600}.csv-preview{margin-top:24px}.csv-preview h3{font-size:18px;margin-bottom:8px}.csv-preview>p{font-size:13px;margin-bottom:16px}.csv-preview-table{max-height:360px;overflow:auto;margin-bottom:20px}.csv-import .error-message li{margin:7px 0;overflow-wrap:anywhere}.csv-import .success-message{font-size:14px;line-height:1.8}.csv-import input[type=file]{max-width:100%}@media(max-width:700px){.catalog-actions{gap:8px}.catalog-actions .btn{font-size:10px;min-height:36px;padding:9px 12px}.csv-import>p,.csv-help p{font-size:11px}}
+
+.csv-photo-progress progress{width:100%;height:.75rem;accent-color:var(--primary,#6b8546)}
+.csv-photo-result li{overflow-wrap:anywhere}

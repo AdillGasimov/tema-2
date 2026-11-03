@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { csv } from "../../src/lib/csv";
-import { MAX_PRODUCT_CSV_BYTES, MAX_PRODUCT_CSV_ROWS, parseProductCsv, productSlug } from "../../src/lib/product-csv";
+import { MAX_PRODUCT_CSV_BYTES, MAX_PRODUCT_CSV_ROWS, parseProductCsv, parsePhotoCsv, productSlug } from "../../src/lib/product-csv";
 
 const headers = ["name", "sku", "price", "cost", "stock", "category", "description", "slug", "variant", "discount"];
 const row = ["Yaşıl mikrofiber dəsmal", "CLOTH-1", "14.99", "8.50", "12", "desmallar", "Nəmi hopdurur.", "", "Yaşıl", ""];
@@ -48,11 +48,24 @@ describe("product CSV files", () => {
   it("limits rows and UTF-8 byte size and rejects empty or wrong-encoding files", () => {
     const rows = Array.from({ length: MAX_PRODUCT_CSV_ROWS }, (_, i) => row.map((v, n) => n === 1 ? `SKU-${i}` : v));
     expect(parseProductCsv(csv([headers, ...rows])).rows).toHaveLength(MAX_PRODUCT_CSV_ROWS);
-    expect(() => parseProductCsv(csv([headers, ...rows, row]))).toThrow("50 sətir");
+    expect(() => parseProductCsv(csv([headers, ...rows, row]))).toThrow(`${MAX_PRODUCT_CSV_ROWS} sətir`);
     expect(() => parseProductCsv("ə".repeat(MAX_PRODUCT_CSV_BYTES / 2 + 1))).toThrow("512 KB");
     expect(() => parseProductCsv("name\0")).toThrow("UTF-8");
     expect(() => parseProductCsv("")).toThrow("boşdur");
     expect(() => parseProductCsv(csv([headers]))).toThrow("məhsul sətirləri");
+  });
+  it("reads deduplicated optional photo links and rejects unsupported URLs at their row", () => {
+    const url = "https://strgimgr.umico.az/img/product/1680/test.jpeg";
+    const result = parseProductCsv(csv([[...headers, "image_urls"], [...row, `${url} | ${url}`]]));
+    expect(result.issues).toEqual([]); expect(result.rows[0].imageUrls).toEqual([url]);
+    expect(parseProductCsv(csv([[...headers, "image_urls"], [...row, "https://example.com/image.jpg"]])).issues[0].line).toBe(2);
+  });
+  it("supports photos-only files without cost, stock or price and never substitutes source fields", () => {
+    const url = "https://strgimgr.b-cdn.net/img/product/1680/test.webp";
+    expect(parsePhotoCsv(csv([["sku", "image_urls"], ["BM-123", url]]))).toEqual({ issues: [], rows: [{ line: 2, sku: "BM-123", imageUrls: [url] }] });
+    expect(() => parsePhotoCsv(csv([["sku"], ["BM-123"]]))).toThrow("Tam CSV");
+    expect(parsePhotoCsv(csv([["sku", "image_urls"], ["BM-123", ""]])).issues[0].message).toContain("Tam CSV");
+    expect(parseProductCsv(csv([["name", "sku", "price", "cost", "stock", "source_price_azn", "source_sku"], ["Dəsmal", "BM-123", "", "", "", "99.99", "wrong"]])).rows).toEqual([]);
   });
   it("transliterates Azerbaijani slugs without executing or interpreting cell text", () => {
     expect(productSlug("ÇÖL üçün — Əşya, yaşıl!" )).toBe("col-ucun-esya-yasil");

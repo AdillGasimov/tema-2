@@ -14,10 +14,12 @@ describe("extension CSV compatibility with the actual shop importer", () => {
       expect(batch.rows[0].description).toContain('Yumşaq, "yaşıl"');
     }
   });
-  it("keeps photo/source metadata in full exports without misrepresenting them as store CSV", () => {
+  it("accepts the existing extension's full export with photos while preserving owner prices", () => {
     const full = fullCsv([product(1)]);
     expect(full).toContain('"image_urls"'); expect(full).toContain("https://strgimgr.umico.az/img/product/1680/example.jpeg");
-    expect(() => parseProductCsv(full)).toThrow(/sütun/);
+    const parsed = parseProductCsv(full);
+    expect(parsed.issues).toEqual([]); expect(parsed.rows[0].imageUrls).toHaveLength(1);
+    expect(parsed.rows[0].variant).toMatchObject({ priceMinor: 1499, costMinor: 850, stock: 12 });
   });
   it("splits Unicode-heavy descriptions to stay inside the actual importer's byte bound", () => {
     const files = storeCsvBatches(Array.from({ length: 40 }, (_, n) => ({ ...product(n + 1), descriptionOverride: "ə".repeat(9000) })));

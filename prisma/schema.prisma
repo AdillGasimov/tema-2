@@ -135,6 +135,9 @@ model ProductImage {
   key       String  @unique
   alt       String
   position  Int     @default(0)
+  sourceUrlHash String?
+
+  @@unique([productId, sourceUrlHash])
 }
 
 model InventoryMovement {

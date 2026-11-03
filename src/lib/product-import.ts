@@ -3,10 +3,12 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db, transaction, type Tx } from "./db";
 import { AppError } from "./errors";
-import { parseProductCsv, type CsvIssue, type CsvProductRow } from "./product-csv";
+import { parseProductCsv, parsePhotoCsv, type CsvIssue, type CsvProductRow } from "./product-csv";
 import { productSchema } from "./validation";
+import { MAX_PRODUCT_PHOTOS } from "./product-photo-policy";
 
-export type ProductImportPreview = { productCount: number; variantCount: number; issues: CsvIssue[]; rows: { line: number; name: string; variant: string; sku: string; category: string; priceMinor: number; costMinor: number; stock: number }[] };
+export type ProductPhotoJob = { sku: string; url: string };
+export type ProductImportPreview = { kind: "products" | "photos"; productCount: number; variantCount: number; photos: ProductPhotoJob[]; issues: CsvIssue[]; rows: { line: number; name: string; variant: string; sku: string; category: string; priceMinor: number | null; costMinor: number | null; stock: number | null; imageCount: number }[] };
 export type ProductImportResult = { productCount: number; variantCount: number };
 type Plan = ProductImportPreview & { products: z.infer<typeof productSchema>[] };
 type Reader = Pick<Tx, "productCategory" | "product" | "productVariant">;
@@ -31,7 +33,13 @@ async function planCsv(csv: string, defaultCategoryId: string | undefined, reade
       group.rows.push(row);
       if (group.rows.length > 30) issues.push({ line: row.line, message: "Bir məhsulda ən çox 30 variant ola bilər." });
     } else groups.set(row.slug, { first: row, categoryId: category.id, rows: [row] });
-    preview.push({ line: row.line, name: row.name, variant: row.variant.name, sku: row.variant.sku, category: category.name, priceMinor: row.variant.priceMinor, costMinor: row.variant.costMinor, stock: row.variant.stock });
+    preview.push({ line: row.line, name: row.name, variant: row.variant.name, sku: row.variant.sku, category: category.name, priceMinor: row.variant.priceMinor, costMinor: row.variant.costMinor, stock: row.variant.stock, imageCount: row.imageUrls.length });
+  }
+  const photos: ProductPhotoJob[] = [];
+  for (const group of groups.values()) {
+    const urls = [...new Set(group.rows.flatMap(r => r.imageUrls))];
+    if (urls.length > MAX_PRODUCT_PHOTOS) issues.push({ line: group.first.line, message: "Bir məhsulun bütün variantlarında cəmi ən çox 12 fərqli şəkil ola bilər." });
+    photos.push(...urls.map(url => ({ sku: group.first.variant.sku, url })));
   }
   const existingProducts = await reader.product.findMany({ where: { slug: { in: [...groups.keys()] } }, select: { slug: true } });
   const existingVariants = await reader.productVariant.findMany({ where: { sku: { in: [...skus] } }, select: { sku: true } });
@@ -41,12 +49,38 @@ async function planCsv(csv: string, defaultCategoryId: string | undefined, reade
     if (existingSkus.has(row.variant.sku)) issues.push({ line: row.line, message: `SKU artıq mağazada var: ${row.variant.sku}.` });
   }
   const products = issues.length ? [] : [...groups.values()].map(g => productSchema.parse({ name: g.first.name, slug: g.first.slug, description: g.first.description, categoryId: g.categoryId, status: "DRAFT", featured: false, variants: g.rows.map(r => r.variant) }));
-  return { productCount: groups.size, variantCount: preview.length, issues, rows: preview, products };
+  return { kind: "products", productCount: groups.size, variantCount: preview.length, photos, issues, rows: preview, products };
 }
 
 export async function previewProductImport(csv: string, defaultCategoryId?: string): Promise<ProductImportPreview> {
   const plan = await planCsv(csv, defaultCategoryId, db);
-  return { productCount: plan.productCount, variantCount: plan.variantCount, rows: plan.rows, issues: plan.issues };
+  return { kind: plan.kind, productCount: plan.productCount, variantCount: plan.variantCount, photos: plan.photos, rows: plan.rows, issues: plan.issues };
+}
+
+export async function previewPhotoImport(csv: string): Promise<ProductImportPreview> {
+  const parsed = parsePhotoCsv(csv), issues = [...parsed.issues];
+  const variants = await db.productVariant.findMany({ where: { sku: { in: parsed.rows.map(r => r.sku) } }, select: {
+    sku: true, name: true, product: { select: { id: true, name: true, category: { select: { name: true } }, images: { select: { sourceUrlHash: true } } } },
+  } });
+  const bySku = new Map(variants.map(v => [v.sku, v]));
+  const groups = new Map<string, { sku: string; line: number; existing: (string | null)[]; urls: Set<string> }>();
+  const rows: ProductImportPreview["rows"] = [];
+  for (const row of parsed.rows) {
+    const variant = bySku.get(row.sku);
+    if (!variant) { issues.push({ line: row.line, message: `SKU mağazada tapılmadı: ${row.sku}.` }); continue; }
+    const product = variant.product;
+    const group = groups.get(product.id) ?? { sku: row.sku, line: row.line, existing: product.images.map(i => i.sourceUrlHash), urls: new Set<string>() };
+    for (const url of row.imageUrls) group.urls.add(url);
+    groups.set(product.id, group);
+    rows.push({ line: row.line, sku: row.sku, name: product.name, variant: variant.name, category: product.category.name, priceMinor: null, costMinor: null, stock: null, imageCount: row.imageUrls.length });
+  }
+  const photos: ProductPhotoJob[] = [];
+  for (const group of groups.values()) {
+    const pending = [...group.urls].filter(url => !group.existing.includes(createHash("sha256").update(url).digest("hex")));
+    if (pending.length + group.existing.length > MAX_PRODUCT_PHOTOS) issues.push({ line: group.line, message: "Mövcud şəkillərlə birlikdə bir məhsulda ən çox 12 şəkil ola bilər." });
+    photos.push(...pending.map(url => ({ sku: group.sku, url })));
+  }
+  return { kind: "photos", productCount: groups.size, variantCount: new Set(rows.map(r => r.sku)).size, photos, issues, rows };
 }
 
 export async function importProducts(csv: string, defaultCategoryId: string | undefined, idempotencyKey: string, actorId: string): Promise<ProductImportResult> {

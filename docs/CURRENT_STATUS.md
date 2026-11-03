@@ -1,4 +1,16 @@
-# Current handoff — 2026-11-03
+# Current handoff — 2026-11-04
+
+## CSV photo import fix
+
+The owner imported the deployed CSV feature and reported missing product pictures. The prior importer intentionally handled metadata only, and the extension's Store CSV export omits image links. The updated website accepts the already-installed extension's **Tam CSV yüklə** export and its `image_urls` field. **Yeni məhsullar və şəkillər** imports drafts, then copies photos sequentially; **Mövcud məhsullara yalnız şəkil əlavə et (SKU ilə)** attaches photos to existing products without changing prices, costs, stock, description or publication status. The owner should use that second mode to repair products already imported. Full exports accept up to 200 rows/512 KiB; own price/cost/stock remain mandatory only for new-product creation. Source pricing is never substituted.
+
+Photo downloads are bounded and restricted to the two known Birmarket image CDNs, with each redirect revalidated. Actual image decoding/reencoding and the existing private Blob/S3 media path are reused. The additive `202611040001_product_image_source` migration adds a nullable unique per-product source hash for safe retries; old images remain valid. Photos are limited to 12/product and 4 MiB each. The UI reports progress and individual failures, can retry failed photos, and supports resuming via photos-only CSV. Existing metadata atomicity, inventory/audit receipts, role checks and origin checks remain enforced. No dependency, extension runtime or environment changes were needed; the published extension download tag is unchanged.
+
+Validation passed: lint, TypeScript, **80 unit tests**, **37 PostgreSQL/S3 integration tests**, production build, and all **10 Chromium acceptance tests**. Browser tests use real Birmarket CDN bytes through the managed proxy, real isolated PostgreSQL and local S3, and verify draft/private media, published product display, photos-only preservation, failed-photo retry, duplicate replay and role/origin/body restrictions. The only browser interception in the photo tests simulates a transient failure before a real successful retry. The migration also passed fresh Vercel preparation and was applied non-destructively to local development/test databases. No production catalog writes or account changes were made. GitHub main was verified unchanged at `abd9019` before release; the owner previously authorized deployment of this CSV workflow. Deployment is the remaining step at this checkpoint; hosted authenticated importing still needs the owner's session.
+
+## Verified live CSV deployment
+
+Commit `abd9019e6ea2774e670e9e9b74985a048ce3c370` was pushed to GitHub `main` after explicit owner approval. Vercel reported successful deployment at `https://vercel.com/adillgasimov/tema-2-staging/EjfTdcviXVr3zviESzTtp2f1rUGa`. Live verification passed: the new POST-only CSV route responds to GET with 405 (previously the fallback returned 401), storefront and login return 200, `/api/health` returns 200 with `status: ok`, and unauthenticated import POST is rejected with 401. No real product imports or business mutations were submitted during verification. The website CSV importer is now deployed; earlier unpublished notes below describe historical stages. Detailed checks are retained in `.local/csv-deployment.json`. This release-verification note is a local handoff update after the verified code deployment.
 
 The owner requested a working administrator login and restoration of environment changes onto the newer published configuration.
 
