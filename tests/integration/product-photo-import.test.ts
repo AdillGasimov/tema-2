@@ -84,4 +84,14 @@ describe("CSV photos with real PostgreSQL and object storage", () => {
     const preview = await previewPhotoImport(csv([["sku", "image_urls"], [`${prefix}-limit`, url("one-too-many")]]));
     expect(preview.issues[0].message).toContain("12 şəkil");
   });
+  it("stores and audits a Temu photo through the same private image pipeline", async () => {
+    remoteImage();
+    const source = "https://img.kwcdn.com/product/fancy/e7a47b3a-c07f-4fd8-b295-7077b607d199.jpg";
+    const before = await db.productVariant.findMany({ where: { productId } });
+    expect(await importProductPhoto({ sku: `${prefix}-1`, url: source }, actor)).toEqual({ attached: true });
+    const logs = await db.auditLog.findMany({ where: { actorId: actor, action: "image.import", entityId: productId } });
+    expect(logs.some(log => (log.detail as { source?: string }).source === "temu-csv")).toBe(true);
+    expect(await db.productVariant.findMany({ where: { productId } })).toEqual(before);
+    expect(await importProductPhoto({ sku: `${prefix}-1`, url: source }, actor)).toEqual({ attached: false });
+  });
 });

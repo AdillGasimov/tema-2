@@ -1,5 +1,6 @@
-import { productId, fullCsv, storeCsvBatches } from "./core.js";
+import { productId, productSource, fullCsv, storeCsvBatches } from "./core.js";
 import { extractBirmarketProduct } from "./extractor.js";
+import { extractTemuProduct } from "./temu-extractor.js";
 const api = globalThis.chrome;
 export async function collection(type = "list", fields = {}) {
   const result = await api.runtime.sendMessage({ type, ...fields });
@@ -8,10 +9,11 @@ export async function collection(type = "list", fields = {}) {
 }
 export async function captureTab(tabId) {
   const tab = await api.tabs.get(tabId);
-  if (!productId(tab.url)) throw new Error("Əvvəl Birmarket məhsul səhifəsini açın.");
-  const result = await api.scripting.executeScript({ target: { tabId }, func: extractBirmarketProduct });
+  const source = productSource(tab.url);
+  if (!source) throw new Error("Əvvəl Birmarket və ya Temu məhsul səhifəsini açın.");
+  const result = await api.scripting.executeScript({ target: { tabId }, func: source.marketplace === "temu" ? extractTemuProduct : extractBirmarketProduct, ...(source.marketplace === "temu" ? { world: "MAIN" } : {}) });
   const product = result[0]?.result;
-  if (!product) throw new Error("Məhsul oxunmadı. Səhifənin yüklənməsini gözləyin.");
+  if (!product || productId(product.sourceUrl) !== source.id) throw new Error("Məhsul oxunmadı. Səhifənin yüklənməsini gözləyin.");
   const products = await collection("add", { product });
   return { product: products.find(p => p.id === productId(product.sourceUrl)), count: products.length };
 }
@@ -32,10 +34,10 @@ async function download(content, filename) {
 }
 export async function exportFull(products) {
   if (!products.length) throw new Error("Əvvəl məhsul yadda saxlayın.");
-  await download(fullCsv(products), `birmarket-full-${day()}.csv`);
+  await download(fullCsv(products), `products-full-${day()}.csv`);
 }
 export async function exportStore(products) {
   const files = storeCsvBatches(products);
-  for (let i = 0; i < files.length; i++) await download(files[i], `birmarket-store-${day()}-${String(i + 1).padStart(2, "0")}.csv`);
+  for (let i = 0; i < files.length; i++) await download(files[i], `products-store-${day()}-${String(i + 1).padStart(2, "0")}.csv`);
   return files.length;
 }

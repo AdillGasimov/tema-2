@@ -21,7 +21,7 @@ const aliases: Record<string, string[]> = {
 };
 // These columns belong to the extension's Full CSV. They are never used as
 // selling price, cost, stock or descriptions chosen by the owner.
-for (const field of ["source_url", "source_price_azn", "source_currency", "source_category", "source_description", "brand", "source_sku", "specifications", "source_variants", "scraped_at"]) aliases[field] = [field];
+for (const field of ["source_url", "source_price", "source_price_azn", "source_currency", "source_category", "source_description", "brand", "source_sku", "specifications", "source_variants", "scraped_at"]) aliases[field] = [field];
 const normalize = (s: string) => s.toLocaleLowerCase("az").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ə/g, "e").replace(/ı/g, "i").replace(/[\s_-]/g, "");
 export function productSlug(name: string) {
   const letters: Record<string, string> = { ə: "e", ı: "i", ö: "o", ü: "u", ğ: "g", ç: "c", ş: "s" };

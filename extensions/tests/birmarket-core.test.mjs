@@ -64,3 +64,16 @@ test("variant groups never split across CSV batches", () => {
   const batches = storeCsvBatches([...standalone, ...variants]); assert.equal(batches.length, 2);
   assert.ok(!batches[0].includes('"group"')); assert.ok(batches[1].includes('"Yaşıl"')); assert.ok(batches[1].includes('"Boz"'));
 });
+
+test("Temu IDs are namespaced and tracking URLs are removed while query-only product identity survives", () => {
+  assert.equal(productId("https://www.temu.com/az-en/towel-g-601105384433706.html?tracking=x"), "temu-601105384433706");
+  assert.equal(productId("https://www.temu.com/g-601105384433706.html"), "temu-601105384433706");
+  const p = normalizeProduct({ sourceUrl: "https://www.temu.com/goods.html?goods_id=601105384433706&_x_sessn_id=private#photo", name: "Temu towel", currency: "USD", sourcePrice: "2.99", imageUrls: ["https://img.kwcdn.com/product/fancy/example.jpg"] });
+  assert.equal(p.id, "temu-601105384433706"); assert.equal(p.sku, "TM-601105384433706"); assert.equal(p.sourceUrl, "https://www.temu.com/goods.html?goods_id=601105384433706"); assert.equal(p.price, ""); assert.match(p.slug, /^temu-/);
+  const data = fullCsv([p]); assert.ok(data.includes('"source_price"')); assert.ok(data.includes('"USD"')); assert.ok(!data.includes("private"));
+  const sameNumber = normalizeProduct({ name: "Birmarket towel", sourceUrl: "https://birmarket.az/product/601105384433706-towel" });
+  assert.notEqual(p.id, sameNumber.id); assert.notEqual(p.sku, sameNumber.sku);
+  const edited = updateProduct(p, { price: "14.99", cost: "7", stock: "5" });
+  assert.equal(mergeProduct(edited, { ...p, name: "Updated source" }).price, "14.99");
+  for (const bad of ["https://temu.com.evil.test/g-601105384433706.html", "http://www.temu.com/g-601105384433706.html", "https://user:secret@www.temu.com/g-601105384433706.html", "https://www.temu.com/login.html?goods_id=601105384433706", "https://www.temu.com/g-601105384433706.html?goods_id=999999", "https://www.temu.com/search_result.html", "https://share.temu.com/secret"]) assert.equal(productId(bad), null);
+});

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { productPhotoUrl, productPhotoUrls } from "../../src/lib/product-photo-policy";
+import { productPhotoUrl, productPhotoUrls, productPhotoProvider } from "../../src/lib/product-photo-policy";
 import { downloadProductPhoto } from "../../src/lib/product-photo-download";
 import { MAX_IMAGE_BYTES } from "../../src/lib/image-policy";
 import { readJsonBody } from "../../src/lib/json-body";
@@ -7,12 +7,25 @@ const url = "https://strgimgr.umico.az/img/product/1680/test.jpeg";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("remote product photo policy and bounded downloads", () => {
-  it("accepts only product photos on the two known HTTPS CDNs and normalizes fragments", () => {
+  it("accepts Birmarket product photos on known HTTPS CDNs and normalizes fragments", () => {
     expect(productPhotoUrl(`${url}?width=800#ignored`)).toBe(`${url}?width=800`);
     expect(productPhotoUrl(url.replace("umico.az", "b-cdn.net"))).toContain("b-cdn.net");
     expect(productPhotoUrls(`${url} | ${url}\n${url}#a`)).toEqual([url]);
     for (const value of ["http://strgimgr.umico.az/img/product/1680/test.jpeg", "https://127.0.0.1/img/product/1/a.jpg", "https://[::1]/img/product/1/a.jpg", "https://strgimgr.umico.az.evil.test/img/product/1/a.jpg", url.replace("https://", "https://user:pass@"), url.replace(".az/", ".az:8443/"), url.replace("test.jpeg", "test.svg"), url.replace("/img/product/", "/icons/")]) expect(() => productPhotoUrl(value)).toThrow();
     expect(() => productPhotoUrls(Array.from({ length: 13 }, (_, n) => url.replace("test", `photo${n}`)).join(" | "))).toThrow("12 şəkil");
+  });
+  it("accepts Temu product paths and transformations, while rejecting lookalike hosts and non-product resources", () => {
+    const image = "https://img.kwcdn.com/product/Fancyalgo/VirtualModelMatting/abc-123.jpeg?imageView2/2/w/800/q/70/format/webp";
+    expect(productPhotoUrl(image)).toBe(image); expect(productPhotoProvider(image)).toBe("temu"); expect(productPhotoProvider(url)).toBe("birmarket");
+    for (const host of ["img-1.kwcdn.com", "img-us.kwcdn.com", "img-eu.kwcdn.com"]) expect(productPhotoUrl(image.replace("img.kwcdn.com", host))).toContain(host);
+    for (const value of [image.replace("https:", "http:"), image.replace("img.kwcdn.com", "img.kwcdn.com.evil.test"), image.replace("img.kwcdn.com", "static.kwcdn.com"), image.replace("img.kwcdn.com", "img.kwcdn.com:8443"), image.replace("https://", "https://secret@"), image.replace("/product/", "/upload_aimg/"), image.replace(".jpeg?", ".svg?"), image.replace("/product/", "/product/../../private/")]) expect(() => productPhotoUrl(value)).toThrow();
+  });
+  it("downloads an allowed Temu image and checks every redirect before sending it", async () => {
+    const image = "https://img.kwcdn.com/product/open/abc-123.webp";
+    const fetcher = vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2]), { headers: { "content-type": "image/webp" } })); vi.stubGlobal("fetch", fetcher);
+    expect((await downloadProductPhoto(image)).type).toBe("image/webp"); expect(fetcher).toHaveBeenCalledTimes(1);
+    fetcher.mockReset().mockResolvedValue(new Response(null, { status: 302, headers: { location: "https://127.0.0.1/product/x.jpg" } }));
+    await expect(downloadProductPhoto(image)).rejects.toThrow("Birmarket və Temu"); expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("copies bytes without cookies or auth and disables automatic redirects", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "image/jpeg" } })); vi.stubGlobal("fetch", fetcher);

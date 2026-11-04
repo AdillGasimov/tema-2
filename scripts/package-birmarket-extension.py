@@ -9,10 +9,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--output-dir", type=Path, default=Path(".local/artifacts"))
 args = parser.parse_args()
 source = Path(__file__).resolve().parents[1] / "extensions/birmarket-product-exporter"
-files = ["manifest.json", "package.json", "core.js", "extractor.js", "background.js", "client.js", "popup.html", "popup.js", "manager.html", "manager.js", "styles.css", "README.md", "icons/16.png", "icons/48.png", "icons/128.png"]
+files = ["manifest.json", "package.json", "core.js", "extractor.js", "temu-extractor.js", "background.js", "client.js", "popup.html", "popup.js", "manager.html", "manager.js", "styles.css", "README.md", "icons/16.png", "icons/48.png", "icons/128.png"]
 manifest = json.loads((source / "manifest.json").read_text())
 assert manifest["manifest_version"] == 3
-assert manifest["host_permissions"] == ["https://birmarket.az/*", "https://www.birmarket.az/*"]
+assert manifest["host_permissions"] == ["https://birmarket.az/*", "https://www.birmarket.az/*", "https://temu.com/*", "https://www.temu.com/*"]
 for file in files:
     item = source / file
     if not item.is_file() or item.is_symlink():

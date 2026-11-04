@@ -1,18 +1,34 @@
 export const MAX_PRODUCTS = 200;
 export const STORE_HEADERS = ["name", "sku", "price", "cost", "stock", "category", "description", "slug", "variant", "discount"];
-export const FULL_HEADERS = [...STORE_HEADERS, "source_url", "image_urls", "source_price_azn", "source_currency", "source_category", "source_description", "brand", "source_sku", "specifications", "source_variants", "scraped_at"];
+export const FULL_HEADERS = [...STORE_HEADERS, "source_url", "image_urls", "source_price_azn", "source_currency", "source_category", "source_description", "brand", "source_sku", "specifications", "source_variants", "scraped_at", "source_price"];
 const text = (value, max = 10000) => typeof value === "string" ? value.slice(0, max).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim() : "";
 
-export function productId(url) {
+export function productSource(value) {
   try {
-    const u = new URL(url);
-    if (u.protocol !== "https:" || !["birmarket.az", "www.birmarket.az"].includes(u.hostname) || u.username || u.password || u.port) return null;
-    return /^\/(?:az\/|ru\/|en\/)?product\/(\d+)(?:-|\/|$)/.exec(u.pathname)?.[1] ?? null;
+    const u = new URL(value);
+    if (u.protocol !== "https:" || u.username || u.password || u.port) return null;
+    let sourceId, marketplace;
+    if (["birmarket.az", "www.birmarket.az"].includes(u.hostname)) {
+      sourceId = /^\/(?:az\/|ru\/|en\/)?product\/(\d{1,20})(?:-|\/|$)/.exec(u.pathname)?.[1]; marketplace = "birmarket";
+    } else if (["temu.com", "www.temu.com"].includes(u.hostname)) {
+      const pathId = /(?:\/|-)g-(\d{5,20})\.html$/.exec(u.pathname)?.[1], queryId = u.searchParams.get("goods_id");
+      if (pathId && queryId && pathId !== queryId) return null;
+      if (pathId) sourceId = pathId;
+      else if (/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?goods(?:\.html)?$/i.test(u.pathname) && /^\d{5,20}$/.test(queryId || "")) sourceId = queryId;
+      marketplace = "temu";
+    }
+    if (!sourceId) return null;
+    u.hash = ""; u.search = "";
+    if (marketplace === "temu" && !/(?:\/|-)g-\d{5,20}\.html$/.test(u.pathname)) u.searchParams.set("goods_id", sourceId);
+    return { id: marketplace === "temu" ? `temu-${sourceId}` : sourceId, sourceId, marketplace, url: u.href };
   } catch { return null; }
 }
+export function productId(url) { return productSource(url)?.id ?? null; }
+
 export function normalizeProduct(raw) {
-  if (!raw || typeof raw !== "object" || !productId(raw.sourceUrl)) throw new Error("Birmarket məhsul səhifəsi tapılmadı.");
-  const id = productId(raw.sourceUrl), source = new URL(raw.sourceUrl); source.search = ""; source.hash = "";
+  const source = raw && typeof raw === "object" ? productSource(raw.sourceUrl) : null;
+  if (!source) throw new Error("Birmarket və ya Temu məhsul səhifəsi tapılmadı.");
+  const { id, sourceId, marketplace } = source;
   const name = text(raw.name, 500); if (!name) throw new Error("Məhsulun adı tapılmadı. Səhifənin yüklənməsini gözləyin.");
   const specifications = (Array.isArray(raw.specifications) ? raw.specifications : []).slice(0, 100)
     .map(p => ({ name: text(p?.name, 200), value: text(p?.value, 1000) })).filter(p => p.name && p.value);
@@ -22,12 +38,12 @@ export function normalizeProduct(raw) {
   const letters = { ə: "e", ı: "i", ö: "o", ü: "u", ğ: "g", ç: "c", ş: "s" };
   const slug = name.toLocaleLowerCase("az").replace(/[əıöüğçş]/g, c => letters[c]).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 140);
   return {
-    id, sourceUrl: source.href, name, sourceSku: text(String(raw.sourceSku ?? id), 100), brand: text(raw.brand, 200),
+    id, marketplace, sourceId, sourceUrl: source.url, name, sourceSku: text(String(raw.sourceSku ?? sourceId), 100), brand: text(raw.brand, 200),
     sourcePrice: text(String(raw.sourcePrice ?? ""), 40), currency: text(raw.currency, 10),
     sourceCategory: text(raw.sourceCategory, 500), description: text(raw.description), specifications,
     imageUrls: images, sourceVariants: (Array.isArray(raw.sourceVariants) ? raw.sourceVariants : []).slice(0, 50).map(v => text(v, 200)).filter(Boolean),
     scrapedAt: text(raw.scrapedAt, 100) || new Date().toISOString(),
-    storeName: name.slice(0, 160).replace(/[\uD800-\uDBFF]$/, ""), sku: `BM-${id}`, price: "", cost: "", stock: "", category: "", slug: `${slug || "mehsul"}-${id}`, variant: "Standart", discount: "", descriptionOverride: null,
+    storeName: name.slice(0, 160).replace(/[\uD800-\uDBFF]$/, ""), sku: `${marketplace === "temu" ? "TM" : "BM"}-${sourceId}`, price: "", cost: "", stock: "", category: "", slug: `${marketplace === "temu" ? "temu-" : ""}${slug || "mehsul"}-${sourceId}`, variant: "Standart", discount: "", descriptionOverride: null,
   };
 }
 export function mergeProduct(existing, incoming) {
@@ -80,7 +96,7 @@ function storeRow(p) {
   return [p.storeName, p.sku, p.price, p.cost, p.stock, p.category, storeDescription(p), p.slug, p.variant, p.discount];
 }
 export function fullCsv(products) {
-  return csv([FULL_HEADERS, ...products.map(p => [...storeRow(p), p.sourceUrl, p.imageUrls.join(" | "), p.sourcePrice, p.currency, p.sourceCategory, p.description, p.brand, p.sourceSku, JSON.stringify(p.specifications), p.sourceVariants.join(" | "), p.scrapedAt])]);
+  return csv([FULL_HEADERS, ...products.map(p => [...storeRow(p), p.sourceUrl, p.imageUrls.join(" | "), p.currency?.toUpperCase() === "AZN" ? p.sourcePrice : "", p.currency, p.sourceCategory, p.description, p.brand, p.sourceSku, JSON.stringify(p.specifications), p.sourceVariants.join(" | "), p.scrapedAt, p.sourcePrice])]);
 }
 export function storeCsvBatches(products) {
   if (!products.length) throw new Error("Əvvəl məhsul yadda saxlayın.");

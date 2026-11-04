@@ -67,6 +67,15 @@ describe("product CSV files", () => {
     expect(parsePhotoCsv(csv([["sku", "image_urls"], ["BM-123", ""]])).issues[0].message).toContain("Tam CSV");
     expect(parseProductCsv(csv([["name", "sku", "price", "cost", "stock", "source_price_azn", "source_sku"], ["Dəsmal", "BM-123", "", "", "", "99.99", "wrong"]])).rows).toEqual([]);
   });
+  it("accepts Temu CSV photos and keeps USD source prices separate from owner-entered AZN amounts", () => {
+    const image = "https://img.kwcdn.com/product/fancy/abc-123.jpg?imageView2/2/w/800";
+    const headers = ["name", "sku", "price", "cost", "stock", "image_urls", "source_url", "source_price", "source_currency"];
+    const input = ["Temu dəsmal", "TM-601099123456789", "14.99", "7.00", "5", image, "https://www.temu.com/g-601099123456789.html", "1.99", "USD"];
+    const parsed = parseProductCsv(csv([headers, input]));
+    expect(parsed.issues).toEqual([]); expect(parsed.rows[0]).toMatchObject({ imageUrls: [image], variant: { priceMinor: 1499, costMinor: 700, stock: 5 } });
+    const blank = [...input]; blank[2] = "";
+    expect(parseProductCsv(csv([headers, blank])).issues[0].message).toContain("Satış AZN");
+  });
   it("transliterates Azerbaijani slugs without executing or interpreting cell text", () => {
     expect(productSlug("ÇÖL üçün — Əşya, yaşıl!" )).toBe("col-ucun-esya-yasil");
     const raw = 'name,sku,price,cost,stock,description\nDəsmal,X,1,0,1,"=HYPERLINK(""https://example.test"")"';

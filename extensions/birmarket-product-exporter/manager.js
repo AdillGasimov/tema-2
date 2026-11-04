@@ -27,7 +27,7 @@ function render() {
     description.setAttribute("aria-label", `Mağazada təsvir · ${product.id}`); description.addEventListener("input", () => { dirty = true; }); descriptionLabel.append(description);
     card.append(fields, descriptionLabel);
     const details = document.createElement("details"); details.append(element("summary", "Mənbə detalları və şəkil linkləri"));
-    const source = element("a", "Birmarket səhifəsini aç"); source.href = product.sourceUrl; source.target = "_blank"; source.rel = "noopener noreferrer"; details.append(source);
+    const source = element("a", "Mənbə məhsul səhifəsini aç"); source.href = product.sourceUrl; source.target = "_blank"; source.rel = "noopener noreferrer"; details.append(source);
     if (product.sourceCategory) details.append(element("p", product.sourceCategory));
     if (product.description) details.append(element("p", product.description));
     const specs = element("ul"); for (const spec of product.specifications) specs.append(element("li", `${spec.name}: ${spec.value}`)); details.append(specs);

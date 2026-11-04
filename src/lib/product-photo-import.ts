@@ -6,7 +6,7 @@ import { audit } from "./commerce";
 import { AppError } from "./errors";
 import { deleteImage, uploadImage } from "./storage";
 import { downloadProductPhoto } from "./product-photo-download";
-import { MAX_PRODUCT_PHOTOS, productPhotoUrl } from "./product-photo-policy";
+import { MAX_PRODUCT_PHOTOS, productPhotoUrl, productPhotoProvider } from "./product-photo-policy";
 
 export const productPhotoInput = z.object({ sku: z.string().trim().min(1).max(80), url: z.string().min(1).max(2048) }).strict();
 
@@ -31,7 +31,7 @@ export async function importProductPhoto(input: z.infer<typeof productPhotoInput
       if (images.length >= MAX_PRODUCT_PHOTOS) throw new AppError("Bu məhsulda artıq 12 şəkil var.", 409);
       const position = images.length ? Math.max(...images.map(i => i.position)) + 1 : 0;
       await tx.productImage.create({ data: { productId, key, alt: product.name, position, sourceUrlHash } });
-      await audit(tx, actorId, "image.import", "Product", productId, { key, sourceUrlHash, source: "birmarket-csv" });
+      await audit(tx, actorId, "image.import", "Product", productId, { key, sourceUrlHash, source: `${productPhotoProvider(url)}-csv` });
       return { attached: true };
     });
     retained = result.attached;

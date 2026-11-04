@@ -4,6 +4,7 @@ import { PNG } from "pngjs";
 import jsQR from "jsqr";
 import sharp from "sharp";
 import { csv } from "../../src/lib/csv";
+import { fullCsv, normalizeProduct, updateProduct } from "../../extensions/birmarket-product-exporter/core.js";
 type Fixture = { run: string; email: string; password: string; otherId: string; otherEmail: string; foreignId: string; foreignCode: string };
 const fixture = (): Fixture => JSON.parse(readFileSync(".local/e2e.json", "utf8"));
 async function login(page: Page, email: string, password: string) {
@@ -329,4 +330,30 @@ test("product trash API checks administrator role, origin, JSON size and validat
   for (const invalid of [{ action: "delete", ids: [] }, { action: "delete", ids: Array.from({ length: 101 }, () => "x") }, { action: "erase", ids: ["x"] }, { ...data, status: "PUBLISHED" }]) expect((await page.request.post("/api/admin/product-trash", { headers, data: invalid })).status()).toBe(400);
   expect((await page.request.post("/api/admin/product-trash", { headers, data })).status()).toBe(404);
   expect((await page.request.post("/api/admin/product-trash", { headers, data: { action: "delete", ids: ["x".repeat(20000)] } })).status()).toBe(413);
+});
+
+test("Temu extension CSV imports the real provided product photo with owner AZN prices", async ({ page, browser }) => {
+  const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
+  const initial = await (await page.request.get("/api/admin/products")).json();
+  const name = `Temu CSV fixture ${f.run}`, slug = `temu-browser-${f.run}`, imageUrl = "https://img.kwcdn.com/product/fancy/e7a47b3a-c07f-4fd8-b295-7077b607d199.jpg";
+  // Financial values and metadata are test fixtures; the image is the actual
+  // public CDN photo supplied by the owner, fetched by the real server route.
+  const product = updateProduct(normalizeProduct({ name, sourceUrl: "https://www.temu.com/az-en/towel-g-601105384433706.html?tracking=private", sourcePrice: "2.99", currency: "USD", imageUrls: [imageUrl] }), { price: "14.99", cost: "7", stock: "3", sku: `TM-601105384433706-${f.run}`, slug });
+  await page.getByRole("button", { name: "CSV idxalı", exact: true }).click(); const panel = page.locator(".csv-import");
+  await panel.getByLabel("Ümumi kateqoriya", { exact: true }).selectOption(initial.categories[0].id);
+  await panel.getByLabel("CSV faylı", { exact: true }).setInputFiles({ name: "temu-full.csv", mimeType: "text/csv", buffer: Buffer.from(fullCsv([product])) });
+  await panel.getByRole("button", { name: "Faylı yoxla", exact: true }).click();
+  await expect(panel.getByText("1 məhsul · 1 variant · 1 yeni şəkil · Qaralama", { exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true }).click();
+  await expect(panel.getByText("1 şəkil əlavə edildi · 0 şəkil artıq mövcud idi · 0 xəta.", { exact: true })).toBeVisible({ timeout: 30000 });
+  const saved = (await (await page.request.get("/api/admin/products")).json()).products.find((p: { slug: string }) => p.slug === slug);
+  expect(saved.status).toBe("DRAFT"); expect(saved.variants[0]).toMatchObject({ priceMinor: 1499, costMinor: 700, stock: 3 }); expect(saved.images).toHaveLength(1);
+  const path = `/api/media/${saved.images[0].key}`, guest = await browser.newContext();
+  expect((await guest.request.get(path)).status()).toBe(401);
+  expect((await page.request.post("/api/admin/product-bulk", { headers: { Origin: "http://localhost:3100" }, data: { ids: [saved.id], status: "PUBLISHED" } })).status()).toBe(200);
+  const photo = await guest.request.get(path); expect(photo.status()).toBe(200); expect(photo.headers()["content-type"]).toContain("image/webp");
+  const shop = await guest.newPage(); await shop.goto(`/products/${slug}`); const shown = shop.locator(`img[src="${path}"]`).first();
+  await expect(shown).toBeVisible(); await expect.poll(() => shown.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  const publicData = await (await guest.request.get(`/api/catalog?q=${encodeURIComponent(name)}`)).text(); expect(publicData).not.toContain("costMinor"); expect(publicData).not.toContain("img.kwcdn.com");
+  await guest.close();
 });

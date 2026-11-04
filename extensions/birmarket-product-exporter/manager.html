@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Birmarket məhsul kolleksiyası</title><link rel="stylesheet" href="styles.css"></head>
-<body class="manager"><header><span class="logo">B</span><div><h1>Məhsul kolleksiyası</h1><p>Birmarket → sizin mağazanız</p></div><span id="count" class="tag">0 məhsul</span></header>
-<main><section class="guide"><h2>İki CSV seçimi</h2><p><strong>Tam CSV:</strong> məhsul detalları, xüsusiyyətlər, mənbə qiyməti və şəkil linkləri. Hazırlamaq üçün bu faylı köməkçinizə göndərə bilərsiniz.</p><p><strong>Mağaza CSV-ləri:</strong> cari mağaza idxalına uyğun 50 sətirlik fayllar. Öz satış qiymətinizi, alış maya dəyərini və stokunuzu doldurun. Şəkillər tam CSV-də qalır; hazırkı mağaza idxalında ayrıca yüklənir.</p></section>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Birmarket və Temu məhsul kolleksiyası</title><link rel="stylesheet" href="styles.css"></head>
+<body class="manager"><header><span class="logo">B</span><div><h1>Məhsul kolleksiyası</h1><p>Birmarket + Temu → sizin mağazanız</p></div><span id="count" class="tag">0 məhsul</span></header>
+<main><section class="guide"><h2>İki CSV seçimi</h2><p><strong>Tam CSV:</strong> məhsul detalları, xüsusiyyətlər, mənbə qiyməti və şəkil linkləri. Temu qiymətinin valyutası ayrıca saxlanılır; mağaza qiymətlərini AZN ilə özünüz yazın. Öz satış qiymətinizi, maya dəyərinizi və stokunuzu doldurub mağazanın CSV idxalına yükləyin.</p><p><strong>Mağaza CSV-ləri:</strong> cari mağaza idxalına uyğun 50 sətirlik fayllar. Öz satış qiymətinizi, alış maya dəyərini və stokunuzu doldurun. Şəkilləri də idxal etmək üçün Tam CSV istifadə edin.</p></section>
 <div class="toolbar"><button id="save" class="primary">Dəyişiklikləri saxla</button><button id="export-full">Tam CSV yüklə</button><button id="export-store">Mağaza CSV-lərini yüklə</button><button id="refresh">Yenilə</button><button id="clear" class="danger">Kolleksiyanı təmizlə</button></div>
 <p id="status" class="status" role="status" aria-live="polite"></p>
-<div id="empty" class="empty">Birmarket-də məhsul açın və əlavənin düyməsindən yadda saxlayın.</div><div id="products"></div>
+<div id="empty" class="empty">Birmarket və ya Temu-da məhsul açın və əlavənin düyməsindən yadda saxlayın.</div><div id="products"></div>
 </main><script type="module" src="manager.js"></script></body></html>
