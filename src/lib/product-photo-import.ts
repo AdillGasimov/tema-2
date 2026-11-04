@@ -13,8 +13,8 @@ export const productPhotoInput = z.object({ sku: z.string().trim().min(1).max(80
 export async function importProductPhoto(input: z.infer<typeof productPhotoInput>, actorId: string) {
   const data = productPhotoInput.parse(input), url = productPhotoUrl(data.url);
   const sourceUrlHash = createHash("sha256").update(url).digest("hex");
-  const variant = await db.productVariant.findUnique({ where: { sku: data.sku }, select: { productId: true } });
-  if (!variant) throw new AppError("Bu SKU mağazada tapılmadı. Əvvəl məhsulu əlavə edin.", 404);
+  const variant = await db.productVariant.findUnique({ where: { sku: data.sku }, select: { productId: true, product: { select: { status: true } } } });
+  if (!variant || variant.product.status === "DELETED") throw new AppError("Bu SKU tapılmadı və ya məhsul silinib. Məhsulu əlavə edin və ya Silinmişlər bölməsindən bərpa edin.", 404);
   const productId = variant.productId;
   const where = { productId_sourceUrlHash: { productId, sourceUrlHash } };
   if (await db.productImage.findUnique({ where, select: { id: true } })) return { attached: false };
@@ -26,7 +26,7 @@ export async function importProductPhoto(input: z.infer<typeof productPhotoInput
   try {
     const result = await transaction(async tx => {
       if (await tx.productImage.findUnique({ where, select: { id: true } })) return { attached: false };
-      const product = await tx.product.findUniqueOrThrow({ where: { id: productId }, select: { name: true } });
+      const product = await tx.product.findUniqueOrThrow({ where: { id: productId, status: { not: "DELETED" } }, select: { name: true } });
       const images = await tx.productImage.findMany({ where: { productId }, select: { position: true } });
       if (images.length >= MAX_PRODUCT_PHOTOS) throw new AppError("Bu məhsulda artıq 12 şəkil var.", 409);
       const position = images.length ? Math.max(...images.map(i => i.position)) + 1 : 0;

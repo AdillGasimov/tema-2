@@ -14,9 +14,9 @@ export async function getAdminData(resource: string, query = new URLSearchParams
       const parsed = z.object({ from: z.iso.date().optional(), to: z.iso.date().optional() }).parse({ from: query.get("from") || undefined, to: query.get("to") || undefined });
       return analytics(parsed.from ? new Date(`${parsed.from}T00:00:00+04:00`) : undefined, parsed.to ? new Date(`${parsed.to}T23:59:59.999+04:00`) : undefined);
     }
-    case "products": return { products: await db.product.findMany({ include: { category: true, variants: true, images: { orderBy: { position: "asc" } } }, orderBy: { createdAt: "desc" } }), categories: await db.productCategory.findMany() };
-    case "categories": return db.productCategory.findMany({ include: { _count: { select: { products: true } } }, orderBy: { name: "asc" } });
-    case "inventory": await transaction(expireReservations); return { variants: await db.productVariant.findMany({ include: { product: { select: { name: true } } }, orderBy: { sku: "asc" } }), movements: await db.inventoryMovement.findMany({ include: { variant: { select: { sku: true } } }, orderBy: { createdAt: "desc" }, take: 200 }) };
+    case "products": return { products: await db.product.findMany({ where: { status: query.get("view") === "deleted" ? "DELETED" : { not: "DELETED" } }, include: { category: true, variants: true, images: { orderBy: { position: "asc" } } }, orderBy: { createdAt: "desc" } }), categories: await db.productCategory.findMany(), deletedView: query.get("view") === "deleted", deletedCount: await db.product.count({ where: { status: "DELETED" } }) };
+    case "categories": return db.productCategory.findMany({ include: { _count: { select: { products: { where: { status: { not: "DELETED" } } } } } }, orderBy: { name: "asc" } });
+    case "inventory": await transaction(expireReservations); return { variants: await db.productVariant.findMany({ where: { product: { status: { not: "DELETED" } } }, include: { product: { select: { name: true } } }, orderBy: { sku: "asc" } }), movements: await db.inventoryMovement.findMany({ include: { variant: { select: { sku: true } } }, orderBy: { createdAt: "desc" }, take: 200 }) };
     case "orders": return db.order.findMany({ include: { items: true, partner: { select: { name: true, code: true } }, commission: true, history: { orderBy: { createdAt: "desc" } }, payments: true, attribution: true }, orderBy: { createdAt: "desc" }, take: 300 });
     case "customers": return db.customer.findMany({ include: { orders: { select: { reference: true, status: true, totalMinor: true, paidMinor: true, refundedMinor: true, createdAt: true } } }, orderBy: { createdAt: "desc" } });
     case "partners": case "cards": return db.partner.findMany({ include: { _count: { select: { visits: true, orders: true } } }, orderBy: { createdAt: "desc" } });
@@ -37,13 +37,17 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
   if (resource === "payouts") return createPayout(raw, actorId);
   if (resource === "product-bulk") {
     const v = z.object({ ids: z.array(id).min(1).max(100), status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]) }).strict().parse(raw);
-    return transaction(async tx => { const result = await tx.product.updateMany({ where: { id: { in: v.ids } }, data: { status: v.status } }); for (const productId of v.ids) await audit(tx, actorId, "product.bulk-status", "Product", productId, { status: v.status }); return result; });
+    return transaction(async tx => {
+      const products = await tx.product.findMany({ where: { id: { in: v.ids }, status: { not: "DELETED" } }, select: { id: true } });
+      const result = await tx.product.updateMany({ where: { id: { in: products.map(p => p.id) } }, data: { status: v.status } });
+      for (const product of products) await audit(tx, actorId, "product.bulk-status", "Product", product.id, { status: v.status }); return result;
+    });
   }
   if (resource === "products") {
     const v = productSchema.parse(raw);
     return transaction(async tx => {
       const { variants, id: productId, ...data } = v;
-      const product = productId ? await tx.product.update({ where: { id: productId }, data }) : await tx.product.create({ data });
+      const product = productId ? await tx.product.update({ where: { id: productId, status: { not: "DELETED" } }, data }) : await tx.product.create({ data });
       const current = await tx.productVariant.findMany({ where: { productId: product.id } });
       const kept: string[] = [];
       for (const variant of variants) {
@@ -75,7 +79,7 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
   }
   if (resource === "inventory") {
     const v = z.object({ variantId: id, delta: z.number().int().min(-1000000).max(1000000).refine(n => n !== 0), reason: z.string().min(3).max(500) }).parse(raw);
-    return transaction(async tx => { await expireReservations(tx); const variant = await tx.productVariant.findUniqueOrThrow({ where: { id: v.variantId } });
+    return transaction(async tx => { await expireReservations(tx); const variant = await tx.productVariant.findUniqueOrThrow({ where: { id: v.variantId, product: { status: { not: "DELETED" } } } });
       if (variant.stock + v.delta < variant.reserved) throw new AppError("Stok rezerv sayından az ola bilməz.");
       const result = await tx.productVariant.update({ where: { id: v.variantId }, data: { stock: { increment: v.delta } } });
       await tx.inventoryMovement.create({ data: { variantId: v.variantId, kind: "ADJUSTMENT", quantity: v.delta, reason: v.reason } });

@@ -17,6 +17,10 @@ Vercel-də ilk administrator üçün layihənin **Settings → Environment Varia
 5. Statusu **Yayımlanıb** edin. **Seçilmiş məhsul** xanası onu ana səhifədə göstərə bilər. Qaralama və arxiv məhsulları açıq kataloqda görünmür. Cədvəldə məhsulları seçərək statusu toplu dəyişə bilərsiniz. Surət düyməsi məhsulu yeni SKU/slug ilə yaratmağa kömək edir.
 6. **Anbar** bölməsində artım üçün müsbət, azalma üçün mənfi say və səbəb daxil edin. Rezervdən az stok yazmaq mümkün deyil. Stok hərəkətləri jurnalda qalır.
 
+**Məhsul silmək:** **Məhsullar** cədvəlində məhsulun yanındakı **Sil** düyməsinə basıb təsdiqləyin. Bir neçə məhsul üçün xanaları seçib **Seçilənləri sil** basın (bir əməliyyatda ən çox 100 məhsul). Məhsullar adi kataloqdan və saytdan çıxarılır. Sifarişlər, ödənişlər, əvvəlki qiymətlər, stok hərəkətləri və şəkillər saxlanılır; mövcud sifarişləri emal etməyə davam edə bilərsiniz.
+
+Səhvən silmisinizsə **Silinmişlər → Bərpa et** seçin və ya bir neçə məhsulu seçib **Seçilənləri bərpa et** basın. Bərpa edilən məhsul **Qaralama** olur; yoxlayıb ayrıca yayımlayın. Eyni SKU və URL adını yeni məhsulda işlətmək əvəzinə əvvəlki məhsulu bərpa edin; tarixçəni qorumaq üçün bu kodlar saxlanılır.
+
 Müştəri sifarişi 30 dəqiqəlik rezerv yaradır. Sadəcə WhatsApp pəncərəsinin açılması stoku satılmış etmir. Admin təsdiqi stoku çıxır; ləğv rezervi azad edir və ya çıxılmış stoku qaytarır. Bütün sifarişin fiziki qaytarılması ayrıca **Qaytarılıb** statusudur. Pulun geri ödənilməsi ayrıca maliyyə əməliyyatıdır.
 
 ### CSV ilə toplu məhsul əlavə etmək

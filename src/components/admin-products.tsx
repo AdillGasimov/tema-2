@@ -2,14 +2,15 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import type { Prisma, ProductCategory } from "@prisma/client";
-import { Copy, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import { Copy, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
 import { money } from "@/lib/money";
 import { ProductCsvImport } from "./product-csv-import";
 import { imageFileError, IMAGE_SIZE_MESSAGE } from "@/lib/image-policy";
 import { Badge, Empty, Field, MoneyField, MutationFeedback, PageHeading, readMoney, optionalMoney, SaveButton, Table, useMutation, api } from "./dashboard-ui";
 type Product = Prisma.ProductGetPayload<{ include: { category: true; variants: true; images: true } }>;
-export type ProductsData = { products: Product[]; categories: ProductCategory[] };
+export type ProductsData = { products: Product[]; categories: ProductCategory[]; deletedView: boolean; deletedCount: number };
 export async function upload(file: File): Promise<string> {
   const invalid = imageFileError(file); if (invalid) throw new Error(invalid);
   const data = new FormData(); data.set("file", file);
@@ -22,11 +23,61 @@ export async function upload(file: File): Promise<string> {
   return d.key;
 }
 export function ProductsPanel({ data }: { data: ProductsData }) {
-  const [checked, setChecked] = useState<string[]>([]); const bulk = useMutation("product-bulk"); const [bulkStatus, setBulkStatus] = useState("DRAFT"); const [selected, setSelected] = useState<string | null | undefined>(); const [query, setQuery] = useState(""); const [copy, setCopy] = useState<Product | undefined>();
-  const [importOpen, setImportOpen] = useState(false);
+  const [checked, setChecked] = useState<string[]>([]), [bulkStatus, setBulkStatus] = useState("DRAFT"), [selected, setSelected] = useState<string | null | undefined>();
+  const [query, setQuery] = useState(""), [copy, setCopy] = useState<Product | undefined>(), [importOpen, setImportOpen] = useState(false), [trashMessage, setTrashMessage] = useState("");
+  const bulk = useMutation("product-bulk"), trash = useMutation("product-trash");
+  const busy = bulk.busy || trash.busy, deletedView = data.deletedView;
   const product = selected ? data.products.find(p => p.id === selected) : undefined;
-  return <><PageHeading title="Məhsullar" subtitle="Məhsullar, qiymətlər, maya dəyəri və sayt görünürlüğünü idarə edin." action={<div className="catalog-actions"><button type="button" className="btn btn-outline" onClick={() => setImportOpen(true)}><Upload size={17} /> CSV idxalı</button><button className="btn btn-dark" onClick={() => { setCopy(undefined); setSelected(null); }}><Plus size={17} /> Yeni məhsul</button></div>} />{importOpen && <ProductCsvImport categories={data.categories} onClose={() => setImportOpen(false)} />}<MutationFeedback {...bulk} /><div className="panel"><div className="panel-heading"><h2>Kataloq <span className="count-tag">{data.products.length}</span></h2><div className="inline-search"><Search size={16} /><input aria-label="Məhsullarda axtar" value={query} onChange={e => setQuery(e.target.value)} placeholder="Ad və ya SKU ilə axtar" /></div></div>{checked.length > 0 && <div className="panel-heading"><span>{checked.length} məhsul seçilib</span><select aria-label="Toplu status" value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}><option value="DRAFT">Qaralama</option><option value="PUBLISHED">Yayımla</option><option value="ARCHIVED">Arxivlə</option></select><button className="btn btn-small btn-outline" disabled={bulk.busy} onClick={() => bulk.run({ ids: checked, status: bulkStatus }, () => setChecked([]))}>Seçilənlərə tətbiq et</button></div>}{data.products.length ? <Table headers={["Seç", "Məhsul", "Kateqoriya", "Qiymət", "Maya dəyəri", "Mənfəət / vahid", "Stok", "Status", "Əməliyyat"]}>{data.products.filter(p => `${p.name} ${p.variants.map(v => v.sku).join(" ")}`.toLowerCase().includes(query.toLowerCase())).map(p => <tr key={p.id}><td><input type="checkbox" aria-label={`${p.name} seç`} checked={checked.includes(p.id)} onChange={e => setChecked(e.target.checked ? [...checked, p.id] : checked.filter(id => id !== p.id))} /></td><td><strong>{p.name}</strong><small>{p.slug}</small></td><td>{p.category.name}</td><td>{p.variants[0] ? money(p.variants[0].discountMinor ?? p.variants[0].priceMinor) : "—"}</td><td>{p.variants[0] ? money(p.variants[0].costMinor) : "—"}</td><td>{p.variants[0] ? <>{money((p.variants[0].discountMinor ?? p.variants[0].priceMinor) - p.variants[0].costMinor)}<small>{Math.floor(((p.variants[0].discountMinor ?? p.variants[0].priceMinor) - p.variants[0].costMinor) * 10000 / Math.max(1, p.variants[0].discountMinor ?? p.variants[0].priceMinor)) / 100}% marja</small></> : "—"}</td><td>{p.variants.reduce((n, v) => n + v.stock - v.reserved, 0)}</td><td><Badge value={p.status} /></td><td><div className="table-actions"><button className="icon-btn" aria-label={`${p.name} redaktə et`} onClick={() => { setCopy(undefined); setSelected(p.id); }}><Pencil size={16} /></button><button className="icon-btn" aria-label={`${p.name} surətini yarat`} onClick={() => { setCopy(p); setSelected(null); }}><Copy size={16} /></button></div></td></tr>)}</Table> : <Empty text="İlk məhsulunuzu əlavə edin. Yayımlanan məhsullar mağazada görünəcək." />}</div>{selected !== undefined && (selected === null || product) && <ProductEditor key={selected ?? `new-${copy?.id ?? ""}`} product={product} duplicate={copy} categories={data.categories} onClose={() => setSelected(undefined)} onSaved={id => { setCopy(undefined); setSelected(id); }} />}</>;
+  const checkedIds = checked.filter(id => data.products.some(p => p.id === id));
+  const visible = data.products.filter(p => `${p.name} ${p.variants.map(v => v.sku).join(" ")}`.toLocaleLowerCase("az").includes(query.toLocaleLowerCase("az")));
+  async function moveProducts(action: "delete" | "restore", ids: string[]) {
+    if (!ids.length) return;
+    if (action === "delete") {
+      const name = ids.length === 1 ? `“${data.products.find(p => p.id === ids[0])?.name}” məhsulu` : `Seçilmiş ${ids.length} məhsul`;
+      if (!window.confirm(`${name} silinsin?\n\nMəhsullar kataloqdan və saytdan çıxarılacaq. Sifariş və stok tarixçəsi saxlanılacaq. Silinmişlər bölməsindən bərpa edə bilərsiniz.`)) return;
+    }
+    setTrashMessage("");
+    await trash.run({ action, ids }, result => {
+      const count = (result as { count: number }).count;
+      setTrashMessage(action === "delete" ? `${count} məhsul silindi. Silinmişlər bölməsindən bərpa edə bilərsiniz.` : `${count} məhsul qaralama kimi bərpa edildi. Yoxladıqdan sonra yayımlaya bilərsiniz.`);
+      setChecked(current => current.filter(id => !ids.includes(id)));
+      if (selected && ids.includes(selected)) setSelected(undefined);
+    });
+  }
+  function switchView() { setChecked([]); setSelected(undefined); setCopy(undefined); setQuery(""); setImportOpen(false); setTrashMessage(""); }
+  return <>
+    <PageHeading title="Məhsullar" subtitle="Məhsullar, qiymətlər, maya dəyəri və sayt görünürlüğünü idarə edin." action={<div className="catalog-actions">
+      <Link className="btn btn-outline" href={deletedView ? "/admin/products" : "/admin/products?view=deleted"} onClick={switchView}>{deletedView ? "Kataloqa qayıt" : `Silinmişlər (${data.deletedCount})`}</Link>
+      {!deletedView && <><button type="button" className="btn btn-outline" disabled={busy} onClick={() => setImportOpen(true)}><Upload size={17} /> CSV idxalı</button><button className="btn btn-dark" disabled={busy} onClick={() => { setCopy(undefined); setSelected(null); }}><Plus size={17} /> Yeni məhsul</button></>}
+    </div>} />
+    {!deletedView && importOpen && <ProductCsvImport categories={data.categories} onClose={() => setImportOpen(false)} />}
+    <MutationFeedback {...bulk} />
+    <p className="error-message" role={trash.error ? "alert" : undefined}>{trash.error}</p>
+    {trashMessage && <p className="success-message" role="status">{trashMessage}</p>}
+    <div className="panel">
+      <div className="panel-heading"><h2>{deletedView ? "Silinmiş məhsullar" : "Kataloq"} <span className="count-tag">{data.products.length}</span></h2><div className="inline-search"><Search size={16} /><input aria-label="Məhsullarda axtar" value={query} onChange={e => setQuery(e.target.value)} placeholder="Ad və ya SKU ilə axtar" /></div></div>
+      {deletedView && <p className="product-trash-hint">Bərpa edilən məhsullar qaralama kimi saxlanılır. SKU və URL adları tarixçəni qorumaq üçün saxlanılıb.</p>}
+      {checkedIds.length > 0 && <div className="panel-heading product-bulk-actions"><span>{checkedIds.length} məhsul seçilib</span>{deletedView ? <button type="button" className="btn btn-small btn-outline" disabled={busy} onClick={() => moveProducts("restore", checkedIds)}><RotateCcw size={15} /> Seçilənləri bərpa et</button> : <>
+        <select aria-label="Toplu status" value={bulkStatus} disabled={busy} onChange={e => setBulkStatus(e.target.value)}><option value="DRAFT">Qaralama</option><option value="PUBLISHED">Yayımla</option><option value="ARCHIVED">Arxivlə</option></select>
+        <button className="btn btn-small btn-outline" disabled={busy} onClick={() => bulk.run({ ids: checkedIds, status: bulkStatus }, () => setChecked([]))}>Seçilənlərə tətbiq et</button>
+        <button type="button" className="btn btn-small btn-outline product-delete-button" disabled={busy} onClick={() => moveProducts("delete", checkedIds)}><Trash2 size={15} /> Seçilənləri sil</button>
+      </>}</div>}
+      {visible.length ? <Table headers={["Seç", "Məhsul", "Kateqoriya", "Qiymət", "Maya dəyəri", "Mənfəət / vahid", "Stok", "Status", "Əməliyyat"]}>{visible.map(p => <tr key={p.id}>
+        <td><input type="checkbox" aria-label={`${p.name} seç`} checked={checkedIds.includes(p.id)} disabled={busy || (!checkedIds.includes(p.id) && checkedIds.length >= 100)} onChange={e => setChecked(e.target.checked ? [...checked, p.id] : checked.filter(id => id !== p.id))} /></td>
+        <td><strong>{p.name}</strong><small>{p.slug}</small></td><td>{p.category.name}</td><td>{p.variants[0] ? money(p.variants[0].discountMinor ?? p.variants[0].priceMinor) : "—"}</td><td>{p.variants[0] ? money(p.variants[0].costMinor) : "—"}</td>
+        <td>{p.variants[0] ? <>{money((p.variants[0].discountMinor ?? p.variants[0].priceMinor) - p.variants[0].costMinor)}<small>{Math.floor(((p.variants[0].discountMinor ?? p.variants[0].priceMinor) - p.variants[0].costMinor) * 10000 / Math.max(1, p.variants[0].discountMinor ?? p.variants[0].priceMinor)) / 100}% marja</small></> : "—"}</td>
+        <td>{p.variants.reduce((n, v) => n + v.stock - v.reserved, 0)}</td><td><Badge value={p.status} /></td>
+        <td><div className="table-actions">{deletedView ? <button type="button" className="btn btn-small btn-outline" aria-label={`${p.name} bərpa et`} disabled={busy} onClick={() => moveProducts("restore", [p.id])}><RotateCcw size={15} /> Bərpa et</button> : <>
+          <button className="icon-btn" aria-label={`${p.name} redaktə et`} disabled={busy} onClick={() => { setCopy(undefined); setSelected(p.id); }}><Pencil size={16} /></button>
+          <button className="icon-btn" aria-label={`${p.name} surətini yarat`} disabled={busy} onClick={() => { setCopy(p); setSelected(null); }}><Copy size={16} /></button>
+          <button type="button" className="btn btn-small btn-outline product-delete-button" aria-label={`${p.name} sil`} disabled={busy} onClick={() => moveProducts("delete", [p.id])}><Trash2 size={15} /> Sil</button>
+        </>}</div></td>
+      </tr>)}</Table> : <Empty text={query ? "Axtarışa uyğun məhsul tapılmadı." : deletedView ? "Silinmiş məhsul yoxdur." : "İlk məhsulunuzu əlavə edin. Yayımlanan məhsullar mağazada görünəcək."} />}
+    </div>
+    {!deletedView && selected !== undefined && (selected === null || product) && <ProductEditor key={selected ?? `new-${copy?.id ?? ""}`} product={product} duplicate={copy} categories={data.categories} onClose={() => setSelected(undefined)} onSaved={id => { setCopy(undefined); setSelected(id); }} />}
+  </>;
 }
+
 function ProductEditor({ product, duplicate, categories, onSaved, onClose }: { product?: Product; duplicate?: Product; categories: ProductCategory[]; onSaved: (id: string) => void; onClose: () => void }) {
   const source = product ?? duplicate;
   type Variant = Partial<Product["variants"][number]>;

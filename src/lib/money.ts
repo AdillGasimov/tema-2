@@ -24,7 +24,7 @@ export const labels: Record<string, string> = {
   SHIPPED: "Yoldadır", DELIVERED: "Çatdırılıb", COMPLETED: "Tamamlanıb", CANCELED: "Ləğv edilib", RETURNED: "Qaytarılıb",
   UNPAID: "Ödənilməyib", PARTIALLY_PAID: "Qismən ödənilib", PAID: "Ödənilib", REFUNDED: "Geri ödənilib",
   PENDING: "Gözləyir", APPROVED: "Təsdiqlənib", PAYABLE: "Ödənişə hazır", REVERSED: "Geri çevrilib",
-  ACTIVE: "Aktiv", SUSPENDED: "Dayandırılıb", INACTIVE: "Qeyri-aktiv", DRAFT: "Qaralama", PUBLISHED: "Yayımlanıb", ARCHIVED: "Arxiv",
+  ACTIVE: "Aktiv", SUSPENDED: "Dayandırılıb", INACTIVE: "Qeyri-aktiv", DRAFT: "Qaralama", PUBLISHED: "Yayımlanıb", ARCHIVED: "Arxiv", DELETED: "Silinib",
   OPEN: "Açıq", REJECTED: "Rədd edilib", RESOLVED: "Həll edilib", RESERVED: "Rezerv", DEDUCTED: "Stokdan çıxılıb", RELEASED: "Azad edilib", RESTORED: "Stoka qaytarılıb",
 };
 export const label = (value: string) => labels[value] ?? value;

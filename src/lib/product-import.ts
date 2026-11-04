@@ -41,12 +41,13 @@ async function planCsv(csv: string, defaultCategoryId: string | undefined, reade
     if (urls.length > MAX_PRODUCT_PHOTOS) issues.push({ line: group.first.line, message: "Bir məhsulun bütün variantlarında cəmi ən çox 12 fərqli şəkil ola bilər." });
     photos.push(...urls.map(url => ({ sku: group.first.variant.sku, url })));
   }
-  const existingProducts = await reader.product.findMany({ where: { slug: { in: [...groups.keys()] } }, select: { slug: true } });
-  const existingVariants = await reader.productVariant.findMany({ where: { sku: { in: [...skus] } }, select: { sku: true } });
+  const existingProducts = await reader.product.findMany({ where: { slug: { in: [...groups.keys()] } }, select: { slug: true, status: true } });
+  const existingVariants = await reader.productVariant.findMany({ where: { sku: { in: [...skus] } }, select: { sku: true, product: { select: { status: true } } } });
   const existingSlugs = new Set(existingProducts.map(p => p.slug)), existingSkus = new Set(existingVariants.map(v => v.sku));
+  const deletedSlugs = new Set(existingProducts.filter(p => p.status === "DELETED").map(p => p.slug)), deletedSkus = new Set(existingVariants.filter(v => v.product.status === "DELETED").map(v => v.sku));
   for (const row of parsed.rows) {
-    if (existingSlugs.has(row.slug)) issues.push({ line: row.line, message: `URL adı artıq mağazada var: ${row.slug}.` });
-    if (existingSkus.has(row.variant.sku)) issues.push({ line: row.line, message: `SKU artıq mağazada var: ${row.variant.sku}.` });
+    if (existingSlugs.has(row.slug)) issues.push({ line: row.line, message: deletedSlugs.has(row.slug) ? `URL adı silinmiş məhsula aiddir: ${row.slug}. Silinmişlər bölməsindən bərpa edin və ya fərqli URL adı seçin.` : `URL adı artıq mağazada var: ${row.slug}.` });
+    if (existingSkus.has(row.variant.sku)) issues.push({ line: row.line, message: deletedSkus.has(row.variant.sku) ? `SKU silinmiş məhsula aiddir: ${row.variant.sku}. Silinmişlər bölməsindən bərpa edin və ya fərqli SKU seçin.` : `SKU artıq mağazada var: ${row.variant.sku}.` });
   }
   const products = issues.length ? [] : [...groups.values()].map(g => productSchema.parse({ name: g.first.name, slug: g.first.slug, description: g.first.description, categoryId: g.categoryId, status: "DRAFT", featured: false, variants: g.rows.map(r => r.variant) }));
   return { kind: "products", productCount: groups.size, variantCount: preview.length, photos, issues, rows: preview, products };
@@ -59,7 +60,7 @@ export async function previewProductImport(csv: string, defaultCategoryId?: stri
 
 export async function previewPhotoImport(csv: string): Promise<ProductImportPreview> {
   const parsed = parsePhotoCsv(csv), issues = [...parsed.issues];
-  const variants = await db.productVariant.findMany({ where: { sku: { in: parsed.rows.map(r => r.sku) } }, select: {
+  const variants = await db.productVariant.findMany({ where: { sku: { in: parsed.rows.map(r => r.sku) }, product: { status: { not: "DELETED" } } }, select: {
     sku: true, name: true, product: { select: { id: true, name: true, category: { select: { name: true } }, images: { select: { sourceUrlHash: true } } } },
   } });
   const bySku = new Map(variants.map(v => [v.sku, v]));

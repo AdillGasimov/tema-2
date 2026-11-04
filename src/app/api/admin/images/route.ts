@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) { return endpoint(async () => {
   ]).parse(await req.json());
   await imageExists(input.key);
   if (input.action === "attach") return transaction(async tx => {
+    await tx.product.findUniqueOrThrow({ where: { id: input.productId, status: { not: "DELETED" } }, select: { id: true } });
     const count = await tx.productImage.count({ where: { productId: input.productId } });
     if (count >= 12) throw new AppError("Ən çox 12 şəkil əlavə edilə bilər.");
     const result = await tx.productImage.create({ data: { productId: input.productId, key: input.key, alt: input.alt, position: count } });

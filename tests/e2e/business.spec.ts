@@ -265,3 +265,68 @@ test("photos-only CSV fills an existing product, retries failed images and prese
   await expect(panel.getByText("Bu fayldakı şəkillər artıq məhsullara əlavə edilib.", { exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Şəkilləri əlavə et", exact: true })).toBeDisabled();
 });
+
+test("product delete confirms or cancels, hides public pages/photos, and restores the original product as a draft", async ({ page, browser }) => {
+  const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
+  const name = `CSV photo ${f.run}`;
+  const original = (await (await page.request.get("/api/admin/products")).json()).products.find((p: { name: string }) => p.name === name);
+  expect(original.status).toBe("PUBLISHED"); expect(original.images).toHaveLength(1);
+  const row = page.getByRole("row").filter({ has: page.getByText(name, { exact: true }) });
+  page.once("dialog", async dialog => { expect(dialog.message()).toContain(name); await dialog.dismiss(); });
+  await row.getByRole("button", { name: `${name} sil`, exact: true }).click(); await expect(row).toBeVisible();
+  expect((await (await page.request.get("/api/admin/products")).json()).products.some((p: { id: string }) => p.id === original.id)).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  page.once("dialog", dialog => dialog.accept());
+  const deleted = page.waitForResponse(response => response.url().endsWith("/api/admin/product-trash") && response.request().method() === "POST");
+  await row.getByRole("button", { name: `${name} sil`, exact: true }).click(); expect((await deleted).status()).toBe(200);
+  await expect(row).toHaveCount(0); await expect(page.getByText("1 məhsul silindi. Silinmişlər bölməsindən bərpa edə bilərsiniz.", { exact: true })).toBeVisible();
+  const guest = await browser.newContext();
+  expect((await guest.request.get(`/products/${original.slug}`)).status()).toBe(404);
+  expect((await guest.request.get(`/api/media/${original.images[0].key}`)).status()).toBe(401);
+  expect((await (await guest.request.get(`/api/catalog?q=${encodeURIComponent(name)}`)).json()).total).toBe(0);
+  const exported = await page.request.get("/api/admin/export?type=products"); expect(await exported.text()).not.toContain(original.variants[0].sku);
+  await page.getByRole("link", { name: /^Silinmişlər/ }).click();
+  await expect(page.getByRole("heading", { name: /Silinmiş məhsullar/ })).toBeVisible();
+  const trashed = page.getByRole("row").filter({ has: page.getByText(name, { exact: true }) }); await expect(trashed).toBeVisible();
+  await trashed.getByRole("button", { name: `${name} bərpa et`, exact: true }).click(); await expect(trashed).toHaveCount(0);
+  await page.getByRole("link", { name: "Kataloqa qayıt", exact: true }).click();
+  const restoredRow = page.getByRole("row").filter({ has: page.getByText(name, { exact: true }) }); await expect(restoredRow).toBeVisible(); await expect(restoredRow.getByText("Qaralama", { exact: true })).toBeVisible();
+  const restored = (await (await page.request.get("/api/admin/products")).json()).products.find((p: { id: string }) => p.id === original.id);
+  expect(restored.variants).toEqual(original.variants); expect(restored.images).toEqual(original.images); expect(restored.slug).toBe(original.slug); expect(restored.description).toBe(original.description);
+  expect((await guest.request.get(`/products/${restored.slug}`)).status()).toBe(404); await guest.close();
+});
+
+test("selected products can be deleted together and restored from trash", async ({ page }) => {
+  const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
+  const initial = await (await page.request.get("/api/admin/products")).json();
+  const names = [`Bulk deletion A ${f.run}`, `Bulk deletion B ${f.run}`];
+  for (let n = 0; n < names.length; n++) {
+    const create = await page.request.post("/api/admin/products", { headers: { Origin: "http://localhost:3100" }, data: { name: names[n], slug: `bulk-delete-${f.run}-${n}`, description: "Deletion test", categoryId: initial.categories[0].id, status: "DRAFT", featured: false, variants: [{ name: "Standart", sku: `BULK-DELETE-${f.run}-${n}`, priceMinor: 1000, costMinor: 500, stock: 3 }] } }); expect(create.status()).toBe(200);
+  }
+  await page.reload();
+  for (const name of names) await page.getByRole("checkbox", { name: `${name} seç`, exact: true }).check();
+  page.once("dialog", async dialog => { expect(dialog.message()).toContain("2 məhsul"); await dialog.accept(); });
+  await page.getByRole("button", { name: "Seçilənləri sil", exact: true }).click();
+  for (const name of names) await expect(page.getByRole("row").filter({ has: page.getByText(name, { exact: true }) })).toHaveCount(0);
+  await expect(page.getByText("2 məhsul silindi. Silinmişlər bölməsindən bərpa edə bilərsiniz.", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: /^Silinmişlər/ }).click();
+  for (const name of names) await page.getByRole("checkbox", { name: `${name} seç`, exact: true }).check();
+  await page.getByRole("button", { name: "Seçilənləri bərpa et", exact: true }).click();
+  for (const name of names) await expect(page.getByRole("row").filter({ has: page.getByText(name, { exact: true }) })).toHaveCount(0);
+  await page.getByRole("link", { name: "Kataloqa qayıt", exact: true }).click();
+  for (const name of names) await expect(page.getByRole("row").filter({ has: page.getByText(name, { exact: true }) }).getByText("Qaralama", { exact: true })).toBeVisible();
+});
+
+test("product trash API checks administrator role, origin, JSON size and validated actions", async ({ page, browser }) => {
+  const f = fixture(), headers = { Origin: "http://localhost:3100" }, data = { action: "delete", ids: ["nonexistent"] };
+  const guest = await browser.newContext(); expect((await guest.request.post("/api/admin/product-trash", { headers, data })).status()).toBe(401); await guest.close();
+  const partner = await browser.newContext(); const portal = await partner.newPage(); await login(portal, f.otherEmail, f.password);
+  for (const action of ["delete", "restore"]) expect((await portal.request.post("/api/admin/product-trash", { headers, data: { ...data, action } })).status()).toBe(403); await partner.close();
+  await login(page, f.email, f.password);
+  expect((await page.request.post("/api/admin/product-trash", { headers: { Origin: "https://outside.example" }, data })).status()).toBe(403);
+  expect((await page.request.post("/api/admin/product-trash", { headers: { ...headers, "Content-Type": "text/plain" }, data: "text" })).status()).toBe(415);
+  for (const invalid of [{ action: "delete", ids: [] }, { action: "delete", ids: Array.from({ length: 101 }, () => "x") }, { action: "erase", ids: ["x"] }, { ...data, status: "PUBLISHED" }]) expect((await page.request.post("/api/admin/product-trash", { headers, data: invalid })).status()).toBe(400);
+  expect((await page.request.post("/api/admin/product-trash", { headers, data })).status()).toBe(404);
+  expect((await page.request.post("/api/admin/product-trash", { headers, data: { action: "delete", ids: ["x".repeat(20000)] } })).status()).toBe(413);
+});
