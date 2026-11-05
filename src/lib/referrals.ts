@@ -3,7 +3,15 @@ import { db } from "./db";
 import { AppError } from "./errors";
 import { codeSchema } from "./validation";
 export const REFERRAL_COOKIE = "store-referral";
-function secret() { if (!process.env.REFERRAL_SECRET) throw new Error("REFERRAL_SECRET is required"); return process.env.REFERRAL_SECRET; }
+function secret() {
+  const dedicated = process.env.REFERRAL_SECRET;
+  if (dedicated?.trim()) return dedicated;
+  const authSecret = process.env.BETTER_AUTH_SECRET;
+  if (!authSecret || authSecret.trim().length < 32) throw new AppError("Referal linkini yadda saxlamaq alınmadı. Kodu sifariş zamanı daxil edə bilərsiniz.", 503);
+  // Keep referral signatures separate from auth signatures without requiring
+  // another deployment secret. Existing dedicated-key cookies stay compatible.
+  return createHmac("sha256", authSecret).update("automotive-commerce/referral-cookie/v1").digest();
+}
 export function signReferral(code: string, expiresAt: number) {
   const payload = Buffer.from(JSON.stringify({ code, expiresAt })).toString("base64url");
   return `${payload}.${createHmac("sha256", secret()).update(payload).digest("base64url")}`;

@@ -55,7 +55,15 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   const pdf = await page.request.get(`/api/cards?ids=${partner.id}&format=pdf`); expect(pdf.headers()["content-type"]).toBe("application/pdf"); expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
   const customer = await browser.newContext({ viewport: { width: 390, height: 844 } }); const shop = await customer.newPage();
   const refResponse = shop.waitForResponse(r => r.url().endsWith("/api/referrals") && r.request().method() === "POST");
-  await shop.goto(`/?ref=${code}`); await refResponse;
+  await shop.goto(`/?ref=${code}`); expect((await refResponse).ok()).toBeTruthy();
+  const referralCookie = (await customer.cookies()).find(c => c.name === "store-referral");
+  expect(referralCookie?.httpOnly).toBe(true); expect(referralCookie?.sameSite).toBe("Lax");
+  expect(await (await shop.request.get("/api/referrals")).json()).toEqual({ code });
+  await expect(shop.locator('.error-message[role="alert"]')).toHaveCount(0);
+  const repeatReferral = shop.waitForResponse(r => r.url().endsWith("/api/referrals") && r.request().method() === "POST");
+  await shop.reload(); expect((await repeatReferral).ok()).toBeTruthy();
+  const visitedPartners = await (await page.request.get("/api/admin/partners")).json();
+  expect(visitedPartners.find((p: { code: string }) => p.code === code)._count.visits).toBe(1);
   await shop.goto(`/products/e2e-${f.run}`); await expect(shop.getByRole("heading", { name, exact: true })).toBeVisible();
   await shop.getByRole("button", { name: "Səbətə əlavə et", exact: true }).click(); await shop.goto("/checkout");
   await expect(shop.getByLabel("Referal kodu (istəyə bağlı)", { exact: true })).toHaveValue(code);

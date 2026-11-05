@@ -34,6 +34,7 @@ jobs:
       - run: npm run lint && npm run typecheck && npm test && npm run test:integration && npm run build
       - run: npx playwright install --with-deps chromium
       - run: PLAYWRIGHT_EXECUTABLE_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')" npm run test:e2e
+      - run: E2E_REFERRAL_AUTH_FALLBACK=1 PLAYWRIGHT_EXECUTABLE_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')" npm run test:e2e -- --grep "complete UI workflow"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -149,13 +149,14 @@ describe("real PostgreSQL business lifecycle", () => {
     const o = await createOrder(checkout());
     await db.storeSettings.update({ where: { id: "store" }, data: { sheetsEnabled: true } });
     const rows: string[] = []; const writer = async (range: string) => { rows.push(range); };
-    // Process backlog, then target's saved row.
-    for (let i = 0; i < 6; i++) await syncSheets(writer);
+    // Prioritize this fixture, independent of backlog left by earlier test runs.
+    await db.integrationSyncJob.update({ where: { orderId: o.id }, data: { updatedAt: new Date(0) } });
+    await syncSheets(writer);
     const job = await db.integrationSyncJob.findUniqueOrThrow({ where: { orderId: o.id } }); expect(job.status).toBe("DONE"); expect(job.sheetRow).not.toBeNull();
-    await db.integrationSyncJob.update({ where: { id: job.id }, data: { status: "PENDING", nextRunAt: new Date() } });
+    await db.integrationSyncJob.update({ where: { id: job.id }, data: { status: "PENDING", nextRunAt: new Date(), updatedAt: new Date(0) } });
     await syncSheets(async () => { throw new Error("network down"); });
     expect((await db.integrationSyncJob.findUniqueOrThrow({ where: { id: job.id } })).status).toBe("RETRY");
-    await db.integrationSyncJob.update({ where: { id: job.id }, data: { nextRunAt: new Date() } }); await syncSheets(writer);
+    await db.integrationSyncJob.update({ where: { id: job.id }, data: { nextRunAt: new Date(), updatedAt: new Date(0) } }); await syncSheets(writer);
     expect((await db.integrationSyncJob.findUniqueOrThrow({ where: { id: job.id } })).sheetRow).toBe(job.sheetRow);
     expect(rows.filter(r => r === `Orders!A${job.sheetRow}:K${job.sheetRow}`).length).toBe(2);
     await db.storeSettings.update({ where: { id: "store" }, data: { sheetsEnabled: false } });

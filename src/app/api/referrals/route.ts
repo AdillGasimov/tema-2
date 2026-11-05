@@ -13,9 +13,10 @@ export async function POST(req: NextRequest) {
     const settings = await db.storeSettings.findUniqueOrThrow({ where: { id: "store" } });
     const maxAge = settings.attributionDays * 86400;
     const current = readReferral((await cookies()).get(REFERRAL_COOKIE)?.value);
+    const signedCookie = signReferral(p.code, Date.now() + maxAge * 1000);
     if (current !== p.code) await db.referralVisit.create({ data: { partnerId: p.id } });
     const response = NextResponse.json({ code: p.code });
-    response.cookies.set(REFERRAL_COOKIE, signReferral(p.code, Date.now() + maxAge * 1000), { httpOnly: true, sameSite: "lax", secure: req.nextUrl.protocol === "https:", path: "/", maxAge });
+    response.cookies.set(REFERRAL_COOKIE, signedCookie, { httpOnly: true, sameSite: "lax", secure: req.nextUrl.protocol === "https:", path: "/", maxAge });
     return response;
   });
 }
