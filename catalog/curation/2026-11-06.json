@@ -1,0 +1,323 @@
+{
+  "id": "owner-catalog-presentation-2026-11-06",
+  "categories": [
+    {
+      "name": "Ətirləndiricilər",
+      "slug": "etirlendiriciler"
+    },
+    {
+      "name": "Salon aksesuarları",
+      "slug": "salon-aksesuarlari"
+    },
+    {
+      "name": "Təmizlik fırçaları",
+      "slug": "temizlik-fircalari"
+    },
+    {
+      "name": "Avtomobilə qulluq",
+      "slug": "avtomobile-qulluq"
+    },
+    {
+      "name": "Mikrofiber dəsmallar",
+      "slug": "mikrofiber-desmallar"
+    }
+  ],
+  "items": [
+    {
+      "id": "306ae8f5-4c71-44b4-96de-e2c0792bab50",
+      "expectedName": "Günəş Enerjisi ilə işləyən Avtomobil Hava Təmizləyicisi Speed Wheel Hub 360",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/00965c7f-f527-4d6a-b25e-8726b2e05bec.webp",
+        "images/8e4ff2de-482e-4be4-8368-021541650064.webp"
+      ],
+      "name": "Günəş enerjili ətirləndirici — Speed Wheel Hub 360",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/00965c7f-f527-4d6a-b25e-8726b2e05bec.webp",
+      "coverAsset": {
+        "file": "wheel-cover.png",
+        "sha256": "a2f1d2318260a5cc6317bff6faf87aeecaf4ca5b4c92390e3ae8e3e2790a5c2b"
+      }
+    },
+    {
+      "id": "63a2f05b-a6d2-48b0-b9d2-1746fe9b68ee",
+      "expectedName": "Avtomobil asması Star",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/86b9acab-4481-4442-9132-cef4dfeb1031.webp",
+        "images/022a3b7d-e8f2-4a68-a01c-e0ab808a9ecb.webp",
+        "images/43f6b5a0-42ee-4609-8c30-9174dab0947c.webp",
+        "images/f5e30a75-af16-4e22-a433-5113b0eb2fb4.webp"
+      ],
+      "name": "Avtomobil asqısı — Star",
+      "categorySlug": "salon-aksesuarlari",
+      "coverKey": "images/86b9acab-4481-4442-9132-cef4dfeb1031.webp"
+    },
+    {
+      "id": "7f6d964f-6dd9-486d-a7d1-a10973e1c509",
+      "expectedName": "Avtomobil aksesuarı Avroluks AV-198 aromatlaşdırıcı ilə, metal/plastik",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/6c75509e-79d2-4cfe-a58d-a2848d265671.webp"
+      ],
+      "name": "Avtomobil ətirləndiricisi — Avroluks AV-198",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/6c75509e-79d2-4cfe-a58d-a2848d265671.webp"
+    },
+    {
+      "id": "6505862f-08e5-4487-b301-3e015a8112c2",
+      "expectedName": "Avtomobil aksesuarı Avroluks AV-199 aromatlaşdırıcı ilə, metal/plastik",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/a33c05ea-837b-47ee-a1f5-d2854c888e78.webp"
+      ],
+      "name": "Avtomobil ətirləndiricisi — Avroluks AV-199",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/a33c05ea-837b-47ee-a1f5-d2854c888e78.webp"
+    },
+    {
+      "id": "9e3ebff6-fcee-4c5e-ae82-574ee385524c",
+      "expectedName": "Hava təravətləndiricisi Qarabağ FK günəş enerjisi ilə işləyən",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/f1c40bdd-f97e-4cdd-a9c8-4137663a9951.webp"
+      ],
+      "name": "Günəş enerjili ətirləndirici — Qarabağ FK",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/f1c40bdd-f97e-4cdd-a9c8-4137663a9951.webp"
+    },
+    {
+      "id": "34d8826c-17f2-4691-ab95-d6d81e371ca3",
+      "expectedName": "Avtomobil üçün aromatlaşdırıcı, günəş enerjisi ilə işləyən, Bayraqlar",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/aa94492a-fba4-4052-ae12-2bc397b88547.webp"
+      ],
+      "name": "Bayraq formalı günəş enerjili ətirləndirici",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/aa94492a-fba4-4052-ae12-2bc397b88547.webp"
+    },
+    {
+      "id": "2d3e6a4f-0b11-4b91-aea5-b97c058f30d2",
+      "expectedName": "Avtomobil üçün ətirləndirici No Brand MR-80116",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/bf359c61-e8dd-4dd2-8545-f56b3bd0b59d.webp",
+        "images/db09b1cf-daf9-44ba-8cbe-1ef02c9a3fee.webp"
+      ],
+      "name": "Avtomobil ətirləndiricisi — MR-80116",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/bf359c61-e8dd-4dd2-8545-f56b3bd0b59d.webp"
+    },
+    {
+      "id": "494d6eb4-5d04-4b94-8126-2c0b7793ac28",
+      "expectedName": "Durable Car Air Freshener - Car Interior Essential Oil Aromatherapy, No Battery Required",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/472aecfc-fd76-40fd-b680-8109d28a7933.webp",
+        "images/04aa1ba1-ffc9-4500-98a8-233e29cdf8b4.webp",
+        "images/2ee9f673-1b3c-4d05-b548-c84e8412620e.webp",
+        "images/70ed8c22-a64a-4fbe-afe1-9f538f7ca675.webp",
+        "images/f7efcd28-8b1f-4e0c-a370-bb0be364dd80.webp",
+        "images/5dca9875-dc5a-45e0-8a85-52f53ed43925.webp",
+        "images/df726fe2-82fb-42af-b984-086ad65dd567.webp",
+        "images/c143a121-8784-4821-b4e8-6cb82205398e.webp",
+        "images/885db9c4-9b13-4c67-8c94-de914582cbe5.webp"
+      ],
+      "name": "Asma avtomobil ətirləndiricisi — vanil",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/472aecfc-fd76-40fd-b680-8109d28a7933.webp",
+      "coverAsset": {
+        "file": "bottle-cover.png",
+        "sha256": "7961ca226d18540b29213ece1fb554243043b14efe9a8b854756d14b3dc0b5d1"
+      }
+    },
+    {
+      "id": "5cf0374e-6574-4c0f-91f7-db5b724cb046",
+      "expectedName": "Car Phone Holder 360 Degree Rotatable Air Vent Mount Car Cell Phone Holder Not Support Phone Charger",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/b92cd677-7e48-4bc3-9778-c6e8bd8276fa.webp",
+        "images/5625685f-9204-4b2a-92a0-bcac88bdc8c0.webp",
+        "images/a4fb3781-2b6c-464c-b68e-f816dc16e549.webp",
+        "images/57516293-9e76-4553-8818-15bd24881b5b.webp",
+        "images/c17f7693-1f1c-4e4c-adde-d043cce893bf.webp",
+        "images/8f757849-16ea-4980-9d2c-9b58bda9980f.webp"
+      ],
+      "name": "Havalandırma üçün 360° telefon tutacağı",
+      "categorySlug": "salon-aksesuarlari",
+      "coverKey": "images/5625685f-9204-4b2a-92a0-bcac88bdc8c0.webp"
+    },
+    {
+      "id": "8bf1e2d3-14a4-4c73-9ad7-353eb92599d9",
+      "expectedName": "Windshield Sunshade: Summer Shading and Heat Insulation, Blocks UV Rays, and Prevents Interior Aging. It Offers Full Coverage, Fits Most Car Models. Protects Pr",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/f30cfaff-4018-46d4-8fe6-aa337c6a2253.webp",
+        "images/30df4beb-6c67-40af-ae50-8830fb8b68c4.webp",
+        "images/dbfbde34-e354-45e7-940c-25c52009648c.webp",
+        "images/ca01f1da-50d2-48fa-8b61-cb6b5ee34dc9.webp",
+        "images/08ff8b27-6484-4ff5-8491-8da15d86a7ff.webp",
+        "images/0a579815-3d6a-4560-afd8-502d59b93b57.webp",
+        "images/7663260d-f0b4-4211-a905-bfdb236a5a4a.webp",
+        "images/1bda8522-b47c-4d29-8128-e877bda336a9.webp",
+        "images/2b25762e-f9a3-4026-8ea8-e79ee6ebfb6e.webp"
+      ],
+      "name": "Ön şüşə üçün günəşlik",
+      "categorySlug": "salon-aksesuarlari",
+      "coverKey": "images/f30cfaff-4018-46d4-8fe6-aa337c6a2253.webp"
+    },
+    {
+      "id": "297f1bd1-2e1f-4d6a-befe-01a1e51bde66",
+      "expectedName": "Solar-Powered Helicopter Air Freshener, Creative Car Aroma Diffuser, Paired with Wooden Fragrance Sheets, Long-Lasting And Delicate Scent, Rotating Design, Auto",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/21476b71-0102-4d97-a139-427f5e0f0d6e.webp",
+        "images/6a436ca3-e01c-4a6e-8b6d-a57cc4a9ad4b.webp",
+        "images/9d733be8-b299-4367-80fc-55c7d2c19898.webp",
+        "images/7911aa0c-f237-4c8f-b831-956fb00096e5.webp",
+        "images/69819cd1-9185-484a-a888-1edd439e4aa8.webp",
+        "images/fdeb2bef-2e7d-4297-8b95-4523866e905e.webp",
+        "images/867b67ac-9bb9-4e34-8451-b4d36bfcb183.webp",
+        "images/73371bb5-8cc5-422c-90f6-a01b4e590a5e.webp",
+        "images/4695e1de-c82b-4591-a6a3-f3c4956fd020.webp",
+        "images/f79febe2-6628-4c7d-810d-30c75377deed.webp",
+        "images/3da64ec4-8ea2-4c51-9448-8269c5474c49.webp",
+        "images/077bc9c8-4631-4ada-b005-9a1fe7125431.webp"
+      ],
+      "name": "Günəş enerjili helikopter formalı ətirləndirici",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/21476b71-0102-4d97-a139-427f5e0f0d6e.webp",
+      "coverAsset": {
+        "file": "helicopter-cover.png",
+        "sha256": "91dc8156a49873d3ea3abe594a2f9e2cf320719561bcdd3e80cc9d64ecd8fdbd"
+      }
+    },
+    {
+      "id": "d594a246-cd44-4bde-8174-171aacf78fc0",
+      "expectedName": "1pc of car interior cleaning brush, soft bristle dust removal brush, dust removal brush, car interior cleaning tool, car detail brush, car dashboard dust remova",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/bc5bd5e9-f054-4bc3-a4fc-21b647db8985.webp",
+        "images/2933fd77-744e-42a2-9c79-d46f4bde4ce3.webp",
+        "images/814b2a4c-315e-47d2-a874-78aa9030f4fd.webp",
+        "images/0aae5d0f-4fee-4e40-ae50-77cab653c287.webp",
+        "images/193b9f90-7003-4e7e-96bf-c2333a38b554.webp",
+        "images/f66813d3-909d-40d0-9249-5ef147cb9f73.webp",
+        "images/f7a43d89-80e5-4894-90ff-9c3ebf8068f1.webp",
+        "images/bdfe154c-c045-4e7e-8bec-20bde3670525.webp"
+      ],
+      "name": "Salon üçün yumşaq təmizlik fırçası",
+      "categorySlug": "temizlik-fircalari",
+      "coverKey": "images/0aae5d0f-4fee-4e40-ae50-77cab653c287.webp"
+    },
+    {
+      "id": "a8fbd288-1082-462a-a83b-2f7e8ab2ba4d",
+      "expectedName": "Car Ashtray, Sporty Style Ashtray, Smokeless with Lid, Fashionable Car Accessory",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/bd2767f9-f12b-47a0-b82b-e556e1c9cb10.webp",
+        "images/990244a2-305d-41a3-a92e-a59a21a94966.webp",
+        "images/e6ef3856-ea5a-4dfe-a5ae-781573dbb0ea.webp",
+        "images/d14712ac-3d1d-4c60-a25b-5317e5f4f5f6.webp",
+        "images/6b7cfc08-5d6b-429d-9a06-96a41164cb71.webp",
+        "images/cfb1cff8-abbc-4c8a-a5a1-fe00c06308ae.webp",
+        "images/1f1989aa-0943-4b77-96e6-2121aff92096.webp"
+      ],
+      "name": "Qapaqlı avtomobil külqabısı",
+      "categorySlug": "salon-aksesuarlari",
+      "coverKey": "images/bd2767f9-f12b-47a0-b82b-e556e1c9cb10.webp",
+      "coverAsset": {
+        "file": "ashtray-cover.png",
+        "sha256": "1327f89f710a0e37b11b4df624545042f91716cfb403ca4481a78bbbed041b1c"
+      }
+    },
+    {
+      "id": "68793069-e157-4e9d-83e1-3b8eb2608da8",
+      "expectedName": "Car Air Freshener And Humidifier, USB Mini Essential Oil Diffuser, Smart Car Aroma Diffuser, Suitable for Various Car Models, 7-Color Changing Lights, Applicabl",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/4787ff0e-60e9-4d94-b778-f4cc8897a566.webp",
+        "images/9661d507-9e18-4166-b8bd-c097eeebfe58.webp",
+        "images/c2454302-532c-42a5-99cf-488321b82677.webp",
+        "images/397c36fb-269d-4e06-aa68-0198c543d64c.webp",
+        "images/69e08013-3a46-4e09-b623-0bf684bb8a51.webp",
+        "images/4ce25ce2-6ad3-41a8-af2a-f4e06064e26c.webp",
+        "images/c7e22c82-1c58-43f7-bfb6-f9905c1790f7.webp",
+        "images/8c3190c9-a16d-4a2a-8f26-66cdcd41440b.webp"
+      ],
+      "name": "USB avtomobil ətirləndiricisi və nəmləndirici",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/4ce25ce2-6ad3-41a8-af2a-f4e06064e26c.webp"
+    },
+    {
+      "id": "669a5655-27d2-4436-8901-66c2a7bfdd49",
+      "expectedName": "50ml Waterproof Spray for Windshields, Mirrors, And Glass Surfaces, with Long-Lasting Protection Polishing Kit",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/a0ed2873-7145-4a44-a36a-2caf254c1aa8.webp",
+        "images/07132d67-2f9c-4bf2-aeb8-2db168ab822e.webp",
+        "images/e14382e6-2ba5-48b5-8811-e4cb6509efab.webp",
+        "images/a2ca8d7c-da9b-459f-aade-d1f8b2817956.webp",
+        "images/4bddca61-c7f1-4eb6-9362-bf15d2d33f29.webp",
+        "images/e57b064e-5149-49d8-a715-88436ab2816e.webp",
+        "images/33816f7b-48f1-4dca-8dc6-4387b60d218a.webp",
+        "images/c9b6b24e-6c39-414d-a4a4-7c317bd2fc85.webp"
+      ],
+      "name": "Su itələyici şüşə spreyi dəsti — 50 ml",
+      "categorySlug": "avtomobile-qulluq",
+      "coverKey": "images/33816f7b-48f1-4dca-8dc6-4387b60d218a.webp"
+    },
+    {
+      "id": "19aeba59-ceb4-45a3-94d5-6ba54ff521ad",
+      "expectedName": "Long-Lasting Liquid Car Tire Wax - Enhancing Shine, Blackening And Anti-Aging Protection",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/9bf48aa3-af7a-4f80-820a-77eb9fecfd00.webp",
+        "images/44808ecd-50b0-4d91-b3f7-a87ff68610c4.webp",
+        "images/080e1b3e-ffaf-480f-8d98-99d59763959e.webp",
+        "images/79b33e59-f87e-43d2-bde4-63321714c0bc.webp",
+        "images/84b5f8ae-f976-434b-b1e1-a4c004946ffe.webp",
+        "images/7bedbde5-1476-4c92-a10c-af7be2a8171c.webp",
+        "images/1b157b6e-b62b-412b-a3e0-b27e34129caa.webp",
+        "images/486e74e5-76ec-4418-bb60-31240f4a03ea.webp",
+        "images/51b1ceed-2891-4b00-83dc-69b46cfe14dd.webp",
+        "images/6dbd795a-41ba-43f3-8509-dd45fb647826.webp"
+      ],
+      "name": "Təkər parladıcı mum",
+      "categorySlug": "avtomobile-qulluq",
+      "coverKey": "images/7bedbde5-1476-4c92-a10c-af7be2a8171c.webp"
+    },
+    {
+      "id": "f3b13a8d-252f-4677-8a85-26d0b3e472e8",
+      "expectedName": "Avtomobil hava təravətləndiricisi, 10 ml",
+      "expectedCategoryId": "cmvwaxhhy000466mhdceg9650",
+      "expectedImageKeys": [
+        "images/1310b372-3189-434e-9f08-096a01ead5db.webp",
+        "images/01328f6f-6667-4934-8854-28d53ab42c4f.webp"
+      ],
+      "name": "Avtomobil ətirləndiricisi — 10 ml",
+      "categorySlug": "etirlendiriciler",
+      "coverKey": "images/1310b372-3189-434e-9f08-096a01ead5db.webp"
+    },
+    {
+      "id": "028bcd41-c24e-443f-ad4c-e3b8c5bbc765",
+      "expectedName": "2-Pack, 1200 GSM Extra-Thick And Large Car Drying Towel for Suvs And Trucks - Large Double-Sided Microfiber Cloth (40 X 60Cm); Quick-Drying, Durable, And Profes",
+      "expectedCategoryId": "cmvwaxhfj000166mhz57jgwf6",
+      "expectedImageKeys": [
+        "images/39a8d96d-d3b3-47a4-9bcf-18683c8a974b.webp",
+        "images/5991276c-0357-4f90-b302-fe8950838ddd.webp",
+        "images/aa2d0756-506c-460f-9f74-c957ebb33101.webp",
+        "images/a7ff235b-2a24-4b86-8fd2-6afc97671b53.webp",
+        "images/4ce02a87-a5cb-4551-9629-6cbb927ff9be.webp",
+        "images/68b9f5d3-3bb3-4c46-9e99-ab38927ef7e5.webp",
+        "images/765cf904-5afd-4a01-a3cd-f42111055e23.webp",
+        "images/e4dc4816-8ae4-42e5-9218-63c81f60fb09.webp",
+        "images/0e5e71c0-0340-4e0d-b50b-b8fc39da2d7e.webp"
+      ],
+      "name": "Mikrofiber qurutma dəsmalı — 40 × 60 sm, 2 ədəd",
+      "categorySlug": "mikrofiber-desmallar",
+      "coverKey": "images/68b9f5d3-3bb3-4c46-9e99-ab38927ef7e5.webp"
+    }
+  ]
+}

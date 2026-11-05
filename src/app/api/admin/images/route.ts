@@ -6,13 +6,20 @@ import { imageExists, deleteImage } from "@/lib/storage";
 import { db, transaction } from "@/lib/db";
 import { audit } from "@/lib/commerce";
 import { AppError } from "@/lib/errors";
+import { setProductCover } from "@/lib/product-image-order";
 export async function POST(req: NextRequest) { return endpoint(async () => {
   mutationGuard(req); const user = await requireUser("ADMIN");
   const input = z.discriminatedUnion("action", [
     z.object({ action: z.literal("attach"), productId: z.string(), key: z.string(), alt: z.string().min(1).max(160) }),
     z.object({ action: z.literal("delete"), key: z.string() }),
+    z.object({ action: z.literal("cover"), productId: z.string().min(1).max(120), key: z.string().min(1).max(100) }).strict(),
   ]).parse(await req.json());
   await imageExists(input.key);
+  if (input.action === "cover") return transaction(async tx => {
+    await setProductCover(tx, input.productId, input.key);
+    await audit(tx, user.id, "image.cover", "Product", input.productId, { key: input.key });
+    return { ok: true };
+  });
   if (input.action === "attach") return transaction(async tx => {
     await tx.product.findUniqueOrThrow({ where: { id: input.productId, status: { not: "DELETED" } }, select: { id: true } });
     const count = await tx.productImage.count({ where: { productId: input.productId } });

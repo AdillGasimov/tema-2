@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Download, FileSpreadsheet, X } from "lucide-react";
 import { csv as makeCsv } from "@/lib/csv";
 import { money } from "@/lib/money";
@@ -80,9 +81,13 @@ export function ProductCsvImport({ categories, onClose }: { categories: { id: st
     <button type="button" className="btn btn-outline" disabled={busy || !file} onClick={checkFile}>{busy ? "Gözləyin…" : "Faylı yoxla"}</button>
     <p className="error-message" role={error ? "alert" : undefined}>{error}</p>
     {preview && !result && <div className="csv-preview"><h3>İdxal önizləməsi</h3><p>{preview.productCount} məhsul · {preview.variantCount} variant · {preview.photos.length} yeni şəkil{kind === "products" ? " · Qaralama" : ""}</p>
+      {kind === "products" && <p className="form-hint">Adları Azərbaycan dilində qısa və aydın yazın. Kateqoriyanı və üz şəklini burada yoxlayın. image_urls sütunundakı ilk şəkil üz şəkli, digərləri məhsul qalereyası olacaq; dəyişiklik üçün CSV-ni düzəldib yenidən yoxlayın.</p>}
       {preview.issues.length > 0 && <div className="error-message" role="alert"><p>Faylda {preview.issues.length} xəta var. Düzəliş edib yenidən yoxlayın; heç bir məhsul saxlanılmayıb.</p><ul>{preview.issues.map((issue, i) => <li key={i}>Sətir {issue.line}: {issue.message}</li>)}</ul></div>}
       {preview.photos.length === 0 && !preview.issues.length && <p className="form-hint">{kind === "products" ? "Bu faylda şəkil keçidləri yoxdur. Şəkillər üçün əlavədən Tam CSV yüklə seçib həmin faylı istifadə edin. Bu faylı təsdiqləsəniz yalnız məhsul məlumatları əlavə ediləcək." : "Bu fayldakı şəkillər artıq məhsullara əlavə edilib."}</p>}
-      {preview.rows.length > 0 && <div className="csv-preview-table"><Table headers={["Sətir", "Məhsul", "Variant / SKU", "Kateqoriya", ...(kind === "products" ? ["Satış", "Maya", "Stok"] : []), "Şəkil"]}>{preview.rows.map(row => <tr key={row.line}><td>{row.line}</td><td>{row.name}</td><td>{row.variant}<small>{row.sku}</small></td><td>{row.category}</td>{kind === "products" && <><td>{money(row.priceMinor!)}</td><td>{money(row.costMinor!)}</td><td>{row.stock}</td></>}<td>{row.imageCount}</td></tr>)}</Table></div>}
+      {preview.rows.length > 0 && <div className="csv-preview-table"><Table headers={["Sətir", kind === "products" ? "Üz şəkli" : "Yeni şəkil", "Məhsul", "Variant / SKU", "Kateqoriya", ...(kind === "products" ? ["Satış", "Maya", "Stok"] : []), "Şəkil"]}>{preview.rows.map(row => {
+        const cover = preview.photos.find(photo => photo.sku === row.sku)?.url;
+        return <tr key={row.line}><td>{row.line}</td><td>{cover ? <span className="csv-cover-preview"><Image src={cover} alt={`${row.name} — şəkil önizləməsi`} fill sizes="64px" referrerPolicy="no-referrer" unoptimized /></span> : "—"}</td><td>{row.name}</td><td>{row.variant}<small>{row.sku}</small></td><td>{row.category}</td>{kind === "products" && <><td>{money(row.priceMinor!)}</td><td>{money(row.costMinor!)}</td><td>{row.stock}</td></>}<td>{row.imageCount}</td></tr>;
+      })}</Table></div>}
       <button type="button" className="btn btn-dark" disabled={busy || preview.issues.length > 0 || !preview.productCount || (kind === "photos" && !preview.photos.length)} onClick={save}>{busy ? "Əlavə edilir…" : kind === "products" ? "Qaralamaları əlavə et" : "Şəkilləri əlavə et"}</button>
     </div>}
     {result && <p className="success-message" role="status">{kind === "products" ? `${result.productCount} məhsul və ${result.variantCount} variant qaralama kimi əlavə edildi. Məhsulları yoxladıqdan sonra yayımlaya bilərsiniz.` : "Məhsulların qiyməti, stoku və statusu qorunub."}</p>}

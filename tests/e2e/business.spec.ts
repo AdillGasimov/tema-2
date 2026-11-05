@@ -39,6 +39,14 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   expect((await privateVisitor.request.get(photoUrl)).status()).toBe(401);
   const ownerPhoto = await page.request.get(photoUrl); expect(ownerPhoto.status()).toBe(200);
   expect(ownerPhoto.headers()["cache-control"]).toBe("private, no-store");
+  const secondPhoto = await sharp({ create: { width: 300, height: 300, channels: 3, background: "#dce8cf" } }).png().toBuffer();
+  await page.getByLabel("Məhsul şəkilləri", { exact: true }).setInputFiles({ name: "second-cover.png", mimeType: "image/png", buffer: secondPhoto });
+  await expect(page.locator(".admin-image-grid img")).toHaveCount(2);
+  const secondPhotoPath = await page.locator(".admin-image-grid img").nth(1).getAttribute("src");
+  const coverChanged = page.waitForResponse(r => r.url().endsWith("/api/admin/images") && r.request().postDataJSON()?.action === "cover");
+  await page.getByRole("button", { name: "Əsas şəkil et", exact: true }).click(); expect((await coverChanged).ok()).toBeTruthy();
+  await expect(page.locator(".admin-image-grid img").first()).toHaveAttribute("src", secondPhotoPath!);
+  await expect(page.getByText("Əsas şəkil", { exact: true })).toBeVisible();
   await page.locator('select[name="status"]').selectOption("PUBLISHED");
   const published = page.waitForResponse(r => r.url().endsWith("/api/admin/products") && r.request().method() === "POST");
   await page.getByRole("button", { name: "Yadda saxla", exact: true }).click(); expect((await published).ok()).toBeTruthy();
@@ -103,10 +111,12 @@ test("authorization, ownership, CSRF and private data boundaries", async ({ page
   const f = fixture(); const unauth = await page.request.get("/api/admin/orders"); expect(unauth.status()).toBe(401);
   const payout = await page.request.post("/api/admin/payouts", { headers: { Origin: "http://localhost:3100" }, data: {} }); expect(payout.status()).toBe(401);
   expect((await page.request.post("/api/admin/orders", { headers: { Origin: "http://localhost:3100" }, data: { action: "deliver", orderId: "missing" } })).status()).toBe(401);
+  expect((await page.request.post("/api/admin/images", { headers: { Origin: "http://localhost:3100" }, data: { action: "cover", productId: "missing", key: "missing" } })).status()).toBe(401);
   await login(page, f.otherEmail, f.password);
   expect((await page.request.get("/api/admin/products")).status()).toBe(403);
   expect((await page.request.post("/api/admin/commissions", { headers: { Origin: "http://localhost:3100" }, data: {} })).status()).toBe(403);
   expect((await page.request.post("/api/admin/orders", { headers: { Origin: "http://localhost:3100" }, data: { action: "deliver", orderId: "missing" } })).status()).toBe(403);
+  expect((await page.request.post("/api/admin/images", { headers: { Origin: "http://localhost:3100" }, data: { action: "cover", productId: "missing", key: "missing" } })).status()).toBe(403);
   const p = await (await page.request.get("/api/partner?partnerId=someone-else")).json(); expect(p.partner.id).toBe(f.otherId); expect(p.orders).toHaveLength(0);
   expect((await page.request.get(`/api/cards?ids=${f.foreignId}&format=png`)).status()).toBe(403);
   const adminContext = await browser.newContext(); const admin = await adminContext.newPage(); await login(admin, f.email, f.password);
@@ -114,6 +124,8 @@ test("authorization, ownership, CSRF and private data boundaries", async ({ page
   expect((await admin.request.post("/api/admin/products", { headers: { Origin: "http://localhost:3100" }, data: { name: "invalid" } })).status()).toBe(400);
   expect((await admin.request.post("/api/admin/orders", { headers: { Origin: "https://outside.example" }, data: { action: "deliver", orderId: "missing" } })).status()).toBe(403);
   expect((await admin.request.post("/api/admin/orders", { headers: { Origin: "http://localhost:3100" }, data: { action: "deliver", orderId: "missing", paidMinor: 1500 } })).status()).toBe(400);
+  expect((await admin.request.post("/api/admin/images", { headers: { Origin: "https://outside.example" }, data: { action: "cover", productId: "missing", key: "missing" } })).status()).toBe(403);
+  expect((await admin.request.post("/api/admin/images", { headers: { Origin: "http://localhost:3100" }, data: { action: "cover", productId: "missing", key: "missing", priceMinor: 1 } })).status()).toBe(400);
   expect((await admin.request.get("/api/admin/export?type=orders")).headers()["content-type"]).toContain("text/csv");
   await adminContext.close();
   const codeContext = await browser.newContext(); const codePage = await codeContext.newPage(); await login(codePage, f.foreignCode, f.password); expect((await (await codePage.request.get("/api/partner")).json()).partner.id).toBe(f.foreignId); await codeContext.close();

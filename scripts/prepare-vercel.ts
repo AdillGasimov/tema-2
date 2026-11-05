@@ -19,6 +19,7 @@ for (const [script, args] of [
   ["scripts/migrate.ts", []],
   ["scripts/initialize.ts", ["--skip-storage"]],
   ["scripts/bootstrap-admin.ts", []],
+  ["scripts/apply-catalog-presentation.ts", []],
 ] as const) {
   const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], { env: process.env, stdio: "inherit" });
   if (result.error) {
@@ -27,4 +28,4 @@ for (const [script, args] of [
   }
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
-console.log("Deployment schema and initial store settings are ready. Existing settings, accounts and business records were preserved.");
+console.log("Deployment preparation is ready. Existing accounts, inventory and financial history were preserved; owner catalog presentation is audited separately.");

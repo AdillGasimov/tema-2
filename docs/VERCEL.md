@@ -20,6 +20,8 @@ Preview and development builds skip automatic database changes. For a separately
 
 Database preparation uses `--skip-storage`: it neither creates nor verifies a bucket. The release also checks for opt-in first-administrator configuration after initializing the database.
 
+The owner-approved catalog presentation release additionally runs `scripts/apply-catalog-presentation.ts` for `catalog/curation/2026-11-06.json`. It targets only the 18 captured existing product IDs, checks their names/categories/gallery order before changes, privately uploads four checksum-verified edited covers and commits only presentation metadata with before/after audits. No inventory or financial fields are part of the plan. A hash-bound receipt makes subsequent builds skip it; other installations without these IDs skip without creating products. Changed captured data stops the batch for review. This step uses the configured private storage identity in the trusted build environment. Preview targets and `SKIP_DEPLOY_DB_SETUP=1` retain their existing skip behavior. Generated cover source keys are kept in the audit and original objects are never deleted.
+
 ## Database connection limits
 
 Runtime workers reuse one Prisma client, including production route bundles. Their PostgreSQL pool defaults to **one connection per worker**, releases idle connections after one second, and queues parallel queries within that budget. `DATABASE_POOL_MAX` can explicitly set a budget of 1–10; increase it only after accounting for the provider's total role limit and the number of workers/deployments. The PostgreSQL URL and TLS verification are preserved.
