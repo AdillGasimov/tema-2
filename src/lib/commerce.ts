@@ -5,7 +5,7 @@ import { db, transaction, type Tx } from "./db";
 import { AppError } from "./errors";
 import { checkoutSchema, codeSchema, id, minor } from "./validation";
 import { paymentState } from "./money";
-import { transitions } from "./order-status";
+import { transitions, canConfirmDelivery } from "./order-status";
 export { transitions } from "./order-status";
 
 export async function audit(tx: Tx, actorId: string, action: string, entity: string, entityId: string, detail: Prisma.InputJsonValue = {}) {
@@ -109,7 +109,22 @@ async function reverseCommission(tx: Tx, orderId: string, reason: string) {
   const partner = await tx.partner.findUniqueOrThrow({ where: { id: c.partnerId } });
   await notify(tx, "PARTNER", "Komissiya düzəlişi", `${reason}. Ödəniş tarixçəsi saxlanılıb.`, partner.userId);
 }
+async function completeDeliveredOrder(tx: Tx, orderId: string, actorId: string, source: "delivery" | "payment" | "status") {
+  const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
+  if (order.status !== "DELIVERED" || order.deliveryStatus !== "DELIVERED" || order.inventoryState !== "DEDUCTED" || order.paidMinor - order.refundedMinor < order.totalMinor) return false;
+  const completedAt = new Date();
+  await tx.order.update({ where: { id: order.id }, data: { status: "COMPLETED", completedAt,
+    history: { create: { status: "COMPLETED", actorId, note: "Çatdırılma və tam ödəniş təsdiqləndi; sifariş tamamlandı." } } } });
+  if (order.partnerId && order.subtotalMinor >= order.minimumOrderMinor && order.commissionMinor > 0) {
+    await tx.commission.upsert({ where: { orderId: order.id }, update: {}, create: { orderId: order.id, partnerId: order.partnerId,
+      ruleId: order.commissionRuleId, amountMinor: order.commissionMinor, eligibleAt: new Date(completedAt.getTime() + order.holdDays * 86400000) } });
+    await notify(tx, "ADMIN", "Komissiya təsdiq gözləyir", order.reference);
+  }
+  await audit(tx, actorId, "order.complete", "Order", order.id, { source });
+  return true;
+}
 export const orderActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("deliver"), orderId: id, note: z.string().max(1000).default("") }).strict(),
   z.object({ action: z.literal("status"), orderId: id, status: z.enum(["CONFIRMED", "PREPARING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELED", "RETURNED"]), note: z.string().max(1000).default("") }),
   z.object({ action: z.literal("payment"), orderId: id, kind: z.enum(["PAYMENT", "REFUND"]), amountMinor: minor.min(1), method: z.string().min(1).max(80), reference: z.string().min(1).max(160), idempotencyKey: z.uuid() }),
   z.object({ action: z.literal("costs"), orderId: id, deliveryCostMinor: minor, packagingCostMinor: minor, note: z.string().max(1000).default("") }),
@@ -120,39 +135,47 @@ export async function updateOrder(raw: unknown, actorId: string) {
   return transaction(async tx => {
     await expireReservations(tx);
     const order = await tx.order.findUniqueOrThrow({ where: { id: input.orderId }, include: { items: true, commission: true } });
-    if (input.action === "status") {
+    if (input.action === "deliver") {
+      if (order.status === "COMPLETED" && order.deliveryStatus === "DELIVERED") return order;
+      if (order.status === "DELIVERED" && order.deliveryStatus === "DELIVERED") {
+        if (!await completeDeliveredOrder(tx, order.id, actorId, "delivery")) return order;
+      } else {
+        if (!canConfirmDelivery(order.status) || order.inventoryState !== "DEDUCTED") throw new AppError("Əvvəl sifarişi təsdiqləyin. Bağlanmış sifarişdə çatdırılma dəyişdirilmir.", 409);
+        await tx.order.update({ where: { id: order.id }, data: { status: "DELIVERED", deliveryStatus: "DELIVERED",
+          history: { create: { status: "DELIVERED", actorId, note: input.note || "Admin çatdırılmanı təsdiqlədi." } } } });
+        await completeDeliveredOrder(tx, order.id, actorId, "delivery");
+      }
+    } else if (input.action === "status") {
       if (order.status === input.status) return order;
       if (!transitions[order.status]?.includes(input.status)) throw new AppError("Bu status keçidi mümkün deyil.");
-      if (input.status === "COMPLETED" && (order.deliveryStatus !== "DELIVERED" || order.paidMinor - order.refundedMinor < order.totalMinor)) throw new AppError("Tamamlanma üçün çatdırılma və tam ödəniş tələb olunur.");
-      let inventoryState = order.inventoryState;
-      if (input.status === "CONFIRMED") {
-        for (const item of order.items) {
-          const v = await tx.productVariant.findUniqueOrThrow({ where: { id: item.variantId } });
-          const ownReservation = order.inventoryState === "RESERVED" ? item.quantity : 0;
-          if (v.stock - v.reserved + ownReservation < item.quantity) throw new AppError("Sifarişi təsdiqləmək üçün stok kifayət deyil.", 409);
-          await tx.productVariant.update({ where: { id: v.id }, data: { stock: { decrement: item.quantity }, reserved: { decrement: ownReservation } } });
-          await tx.inventoryMovement.create({ data: { variantId: v.id, orderId: order.id, kind: "SALE", quantity: -item.quantity, reason: "Admin təsdiqi" } });
-          if (v.stock - item.quantity <= v.lowStock) await notify(tx, "ADMIN", "Az stok", `${item.productName} · ${item.sku}`);
+      if (input.status === "COMPLETED") {
+        if (!await completeDeliveredOrder(tx, order.id, actorId, "status")) throw new AppError("Tamamlanma üçün çatdırılma, təsdiqlənmiş stok və tam ödəniş tələb olunur.");
+      } else {
+        let inventoryState = order.inventoryState;
+        if (input.status === "CONFIRMED") {
+          for (const item of order.items) {
+            const v = await tx.productVariant.findUniqueOrThrow({ where: { id: item.variantId } });
+            const ownReservation = order.inventoryState === "RESERVED" ? item.quantity : 0;
+            if (v.stock - v.reserved + ownReservation < item.quantity) throw new AppError("Sifarişi təsdiqləmək üçün stok kifayət deyil.", 409);
+            await tx.productVariant.update({ where: { id: v.id }, data: { stock: { decrement: item.quantity }, reserved: { decrement: ownReservation } } });
+            await tx.inventoryMovement.create({ data: { variantId: v.id, orderId: order.id, kind: "SALE", quantity: -item.quantity, reason: "Admin təsdiqi" } });
+            if (v.stock - item.quantity <= v.lowStock) await notify(tx, "ADMIN", "Az stok", `${item.productName} · ${item.sku}`);
+          }
+          inventoryState = "DEDUCTED";
         }
-        inventoryState = "DEDUCTED";
-      }
-      if (["CANCELED", "RETURNED"].includes(input.status)) {
-        for (const item of order.items) {
-          if (inventoryState === "RESERVED") await tx.productVariant.update({ where: { id: item.variantId }, data: { reserved: { decrement: item.quantity } } });
-          if (inventoryState === "DEDUCTED") await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
-          if (["RESERVED", "DEDUCTED"].includes(inventoryState)) await tx.inventoryMovement.create({ data: { variantId: item.variantId, orderId: order.id, kind: inventoryState === "RESERVED" ? "RELEASE" : "RETURN", quantity: item.quantity, reason: input.note || input.status } });
+        if (["CANCELED", "RETURNED"].includes(input.status)) {
+          for (const item of order.items) {
+            if (inventoryState === "RESERVED") await tx.productVariant.update({ where: { id: item.variantId }, data: { reserved: { decrement: item.quantity } } });
+            if (inventoryState === "DEDUCTED") await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
+            if (["RESERVED", "DEDUCTED"].includes(inventoryState)) await tx.inventoryMovement.create({ data: { variantId: item.variantId, orderId: order.id, kind: inventoryState === "RESERVED" ? "RELEASE" : "RETURN", quantity: item.quantity, reason: input.note || input.status } });
+          }
+          inventoryState = inventoryState === "DEDUCTED" ? "RESTORED" : "RELEASED";
+          await reverseCommission(tx, order.id, input.status);
         }
-        inventoryState = inventoryState === "DEDUCTED" ? "RESTORED" : "RELEASED";
-        await reverseCommission(tx, order.id, input.status);
-      }
-      const deliveryStatus = input.status === "SHIPPED" ? "SHIPPED" : ["DELIVERED", "COMPLETED"].includes(input.status) ? "DELIVERED" : input.status === "RETURNED" ? "RETURNED" : input.status === "CANCELED" ? "CANCELED" : order.deliveryStatus;
-      await tx.order.update({ where: { id: order.id }, data: { status: input.status, inventoryState, deliveryStatus,
-        ...(input.status === "COMPLETED" ? { completedAt: new Date() } : {}),
-        history: { create: { status: input.status, note: input.note || input.status, actorId } } } });
-      if (input.status === "COMPLETED" && order.partnerId && order.subtotalMinor >= order.minimumOrderMinor && order.commissionMinor > 0) {
-        await tx.commission.upsert({ where: { orderId: order.id }, update: {}, create: { orderId: order.id, partnerId: order.partnerId,
-          ruleId: order.commissionRuleId, amountMinor: order.commissionMinor, eligibleAt: new Date(Date.now() + order.holdDays * 86400000) } });
-        await notify(tx, "ADMIN", "Komissiya təsdiq gözləyir", order.reference);
+        const deliveryStatus = input.status === "SHIPPED" ? "SHIPPED" : input.status === "DELIVERED" ? "DELIVERED" : input.status === "RETURNED" ? "RETURNED" : input.status === "CANCELED" ? "CANCELED" : order.deliveryStatus;
+        await tx.order.update({ where: { id: order.id }, data: { status: input.status, inventoryState, deliveryStatus,
+          history: { create: { status: input.status, note: input.note || input.status, actorId } } } });
+        if (input.status === "DELIVERED") await completeDeliveredOrder(tx, order.id, actorId, "delivery");
       }
     } else if (input.action === "payment") {
       const existing = await tx.payment.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
@@ -167,6 +190,7 @@ export async function updateOrder(raw: unknown, actorId: string) {
       const refunded = order.refundedMinor + (input.kind === "REFUND" ? input.amountMinor : 0);
       await tx.order.update({ where: { id: order.id }, data: { paidMinor: paid, refundedMinor: refunded, paymentStatus: paymentState(paid, refunded, order.totalMinor), history: { create: { status: order.status, actorId, note: `${input.kind}: ${input.amountMinor} qəpik · ${input.reference}` } } } });
       if (input.kind === "REFUND") await reverseCommission(tx, order.id, "Geri ödəniş");
+      else await completeDeliveredOrder(tx, order.id, actorId, "payment");
     } else if (input.action === "costs") {
       await tx.order.update({ where: { id: order.id }, data: { deliveryCostMinor: input.deliveryCostMinor, packagingCostMinor: input.packagingCostMinor, history: { create: { status: order.status, actorId, note: input.note || "Xərclər yeniləndi" } } } });
     } else {

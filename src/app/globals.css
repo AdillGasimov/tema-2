@@ -21,3 +21,10 @@
 .product-bulk-actions{flex-wrap:wrap;gap:12px}
 .product-trash-hint{padding:0 24px;color:var(--muted,#6b7568)}
 .badge-deleted{color:#b42318;background:#fff0ed}
+
+.order-row-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.order-quick-action{max-width:220px}
+.order-quick-action .error-message{font-size:.8rem;white-space:normal}
+.order-extra-actions{margin-top:20px;padding-top:16px;border-top:1px solid var(--border,#e1e5d8)}
+.order-extra-actions summary{cursor:pointer;font-weight:600;margin-bottom:14px}
+.order-progress-panel>.order-quick-action{margin:16px 0}

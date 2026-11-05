@@ -58,12 +58,12 @@ Etibarlı referal linki standart olaraq 30 gün yadda qalır. Birbaşa giriş on
 
 ## Sifarişin emalı
 
-1. **Sifarişlər** bölməsində yeni sorğunu açın. İlk status **WhatsApp təsdiqi gözlənilir**, ödəniş **Ödənilməyib** olur. Müştərinin WhatsApp mesajını özünüz yoxlayın: pəncərənin açılması mesajın göndərildiyini sübut etmir.
-2. Məhsul və ünvanı müştəri ilə dəqiqləşdirin, sonra **Təsdiqlənib → Hazırlanır → Yoldadır → Çatdırılıb** statuslarına keçirin.
+1. **Sifarişlər** cədvəlində yeni sorğunu yoxlayın və müştəri ilə dəqiqləşdirəndən sonra həmin sətirdə **Təsdiqlə** basın. İlk status **WhatsApp təsdiqi gözlənilir**, ödəniş **Ödənilməyib** olur. WhatsApp pəncərəsinin açılması mesajın göndərildiyini sübut etmir.
+2. Məhsul faktiki müştəriyə çatanda cədvəldə və ya sifariş detalında **Çatdırıldı** basın. Hazırlanır və Yoldadır mərhələlərini ayrıca seçmək məcburi deyil. Tam ödəniş artıq qeydə alınıbsa, sifariş həmin kliklə **Tamamlanıb** olur və uyğun referal komissiyası yaranır.
 3. Həqiqətən aldığınız pulu **Ödəniş / geri ödəniş** formasında yazın. Məbləğ, üsul və əməliyyat istinadı mütləqdir. Eyni sorğunu təkrar göndərmək ödənişi iki dəfə yaratmır. Başqa ayrıca ödəniş daxil edəcəksinizsə **Yeni ödəniş əməliyyatı başlat** seçin.
 4. Biznesin çatdırılma və qablaşdırma xərclərini sifarişdə qeyd edin. Onları **Ümumi xərclər** bölməsinə bir daha yazmayın.
-5. Yalnız tam ödəniş və çatdırılmadan sonra **Tamamlanıb** edin. Sifarişin qiymətləri və maya dəyəri sonradan məhsul dəyişəndə dəyişmir.
-6. Ləğv və ya qaytarma pulu avtomatik geri köçürmür. Faktiki geri ödənişi ayrıca qeydə alın. Komissiya uyğun qaydada geri çevrilir.
+5. Çatdırılma təsdiqlənib, amma ödəniş tam deyilsə sifariş **Çatdırılıb** qalır. Son ödənişi qeydə alanda sistem onu avtomatik tamamlayır. Əvvəldən çatdırılmış və tam ödənilmiş sifarişlərdə görünən **Tamamla** düyməsi də bir kliklə işləyir. Sifarişin qiymətləri və maya dəyəri dəyişmir; tamamlama əlavə ödəniş və ya ikinci stok çıxışı yaratmır.
+6. Ləğv, qaytarma və istəyə bağlı ətraflı statuslar üçün **Digər status əməliyyatları** bölməsini açın. Ləğv və ya qaytarma pulu avtomatik geri köçürmür; faktiki geri ödənişi ayrıca qeydə alın. Komissiya uyğun qaydada geri çevrilir.
 
 ## Komissiya və ödəniş
 
