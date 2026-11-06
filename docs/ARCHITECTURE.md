@@ -19,6 +19,10 @@ The combined browser exporter 1.1.0 keeps Birmarket's existing collection IDs an
 
 ## Roles and privacy
 
+Website branding remains database-driven through the existing store name, logo and favicon fields. `BrandLogo` uses the approved full image on light surfaces; dark surfaces use the matching favicon symbol and a readable text wordmark. Stores with a full logo but no symbol receive a light backing on dark surfaces, and unconfigured stores retain the existing fallback. Header, footer, login, admin and partner layouts share this component. Page titles/Open Graph, browser icon and printed cards continue to read store settings.
+
+The owner-approved `branding/furycar/release.json` is a one-time, hash-bound brand update run after catalog preparation on the guarded primary target. It requires this owner's existing catalog receipt, compares the captured name/domain/logo/favicon before writing, validates and privately uploads the two assets, and changes only name/logo/favicon in one audited, advisory-locked transaction. Other installations skip it; conflicting owner edits abort for review. Replays preserve later settings edits. Domain/contact/commission/inventory/account data are not changed, original objects are retained, and unreferenced newly uploaded assets are cleaned up cautiously.
+
 Better Auth User/Session/Account/Verification tables hold authentication. ADMIN is provisioned only by trusted CLI or the opt-in first-admin release script using private `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The release step is serialized and transactional, preserves an existing administrator, rejects email collisions without promoting users, and never resets passwords. No public signup/bootstrap endpoint exists. PARTNER is linked one-to-one to a partner profile. Every protected handler and layout checks server sessions. Customer checkout is anonymous. Partner projections exclude customer identity, order addresses, phone, purchase cost and store profits. Admin financial APIs are never public.
 
 ## Money, orders and inventory

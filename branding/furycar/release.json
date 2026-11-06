@@ -1,0 +1,19 @@
+{
+  "id": "owner-furycar-brand-2026-11-06",
+  "ownerMarker": "catalog-presentation:owner-catalog-presentation-2026-11-06",
+  "expected": {
+    "brandName": "AutoCare Store",
+    "domain": "https://tema-2-staging.vercel.app",
+    "logoKey": null,
+    "faviconKey": null
+  },
+  "brandName": "FuryCar",
+  "logo": {
+    "file": "logo.png",
+    "sha256": "87808f51197ef103e496fcfaafdf5785816efa2abd393047609c54c7ed0c455b"
+  },
+  "favicon": {
+    "file": "favicon.png",
+    "sha256": "3e3a1bce96d575ec06870790b62fe8c849f09506a948ff0a48036633b19a1eb5"
+  }
+}

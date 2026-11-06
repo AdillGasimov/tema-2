@@ -69,3 +69,14 @@
   .product-card .product-arrow{width:28px;height:28px;right:9px;bottom:9px}
 }
 @media(prefers-reduced-motion:reduce){.product-card,.product-card .product-image-frame img{transition:none}.product-card:hover .product-image-frame img{transform:none}}
+
+/* The full logo is used on light surfaces; dark surfaces use its symbol and name. */
+.brand .brand-logo{display:block;width:220px;height:68px;max-width:100%;object-fit:contain}
+.brand .brand-symbol{display:block;width:46px;height:46px;flex-shrink:0;object-fit:contain}
+.brand-wordmark-custom{font-style:italic;font-weight:850;letter-spacing:-1.1px}
+.brand-logo-light-panel{background:#fff;border-radius:8px;padding:5px 10px}
+.dashboard-sidebar .brand .brand-symbol{width:43px;height:43px}
+.dashboard-sidebar .brand .brand-wordmark-custom{font-size:27px}
+.store-footer .brand .brand-wordmark-custom{font-size:30px}
+.login-story .brand .brand-wordmark-custom{font-size:34px}
+@media(max-width:600px){.brand .brand-logo{width:174px;height:52px}.brand .brand-symbol{width:36px;height:36px}.brand-wordmark-custom{font-size:25px}}

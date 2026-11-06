@@ -8,6 +8,8 @@ Vercel-də ilk administrator üçün layihənin **Settings → Environment Varia
 
 **Tənzimləmələr** bölməsində mağazanın adını, domenini, loqosunu, faviconunu və rənglərini dəyişin. Real əlaqə məlumatlarını və WhatsApp nömrəsini ölkə kodu ilə daxil edin. WhatsApp boş olduqda sifariş qəbulu bağlıdır. Ana başlıq, banner şəkli, elan, görünən bölmələr və çatdırılma şərtləri də buradadır. Saxladıqdan sonra dəyişiklikləri mağazada yeniləmə ilə görün; tətbiqin yenidən build edilməsinə ehtiyac yoxdur.
 
+FuryCar brendi üçün **Loqo** sahəsində tam yazılı loqo, **Favicon** sahəsində F nişanı saxlanılır. Açıq başlıq tam loqonu, tünd altlıq və panellər F nişanı ilə mağaza adını göstərir. Brendi sonradan dəyişəndə adı və uyğun şəkilləri birlikdə yeniləyin; növbəti deploy şəxsi dəyişikliklərinizi geri qaytarmır.
+
 ## Məhsul və anbar
 
 1. **Kateqoriyalar** bölməsində kateqoriya və lazım olsa alt kateqoriya yaradın. Ana səhifədə göstərmək üçün uyğun xananı işarələyin.

@@ -20,6 +20,7 @@ for (const [script, args] of [
   ["scripts/initialize.ts", ["--skip-storage"]],
   ["scripts/bootstrap-admin.ts", []],
   ["scripts/apply-catalog-presentation.ts", []],
+  ["scripts/apply-brand-release.ts", []],
 ] as const) {
   const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], { env: process.env, stdio: "inherit" });
   if (result.error) {

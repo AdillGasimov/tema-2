@@ -130,7 +130,7 @@ test("authorization, ownership, CSRF and private data boundaries", async ({ page
   await adminContext.close();
   const codeContext = await browser.newContext(); const codePage = await codeContext.newPage(); await login(codePage, f.foreignCode, f.password); expect((await (await codePage.request.get("/api/partner")).json()).partner.id).toBe(f.foreignId); await codeContext.close();
 });
-test("all management pages render; rebranding and product changes apply without a rebuild", async ({ page }) => {
+test("all management pages render; rebranding and product changes apply without a rebuild", async ({ page, browser }) => {
   const f = fixture(); await login(page, f.email, f.password); const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   for (const section of ["overview", "products", "categories", "inventory", "orders", "customers", "partners", "cards", "commissions", "payouts", "analytics", "expenses", "reports", "disputes", "notifications", "integrations", "audit", "settings"]) {
     const response = await page.goto(`/admin/${section}`); expect(response?.status()).toBe(200); await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -140,8 +140,30 @@ test("all management pages render; rebranding and product changes apply without 
   const products = await (await page.request.get("/api/admin/products")).json(); const product = products.products.find((p: { slug: string }) => p.slug === `e2e-${f.run}`);
   const headers = { Origin: "http://localhost:3100" };
   try {
-    const saved = await page.request.post("/api/admin/settings", { headers, data: { settings: { ...settings, brandName: `Garage ${f.run}`, logoKey: product?.images[0]?.key ?? null }, rule: initial.rule } }); expect(saved.ok()).toBeTruthy();
+    await page.getByLabel("Mağaza adı", { exact: true }).fill(`Garage ${f.run}`);
+    await page.getByLabel("Loqo", { exact: true }).setInputFiles("branding/furycar/logo.png");
+    await expect(page.locator('input[name="logoKey"]')).toHaveValue(/^images\//);
+    await page.getByLabel("Favicon", { exact: true }).setInputFiles("branding/furycar/favicon.png");
+    await expect(page.locator('input[name="faviconKey"]')).toHaveValue(/^images\//);
+    const brandSaved = page.waitForResponse(r => r.url().endsWith("/api/admin/settings") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Bütün tənzimləmələri saxla", exact: true }).click(); const saved = await brandSaved; expect(saved.ok()).toBeTruthy();
+    const branded = await saved.json();
     await page.goto("/"); await expect(page.getByRole("link", { name: `Garage ${f.run}`, exact: true }).first()).toBeVisible(); expect(await page.title()).toContain(`Garage ${f.run}`);
+    await expect(page.locator(".store-header .brand-logo")).toHaveAttribute("src", `/api/media/${branded.logoKey}`);
+    await expect(page.locator(".store-footer .brand-wordmark")).toHaveText(`Garage ${f.run}`);
+    await expect(page.locator(".store-footer .brand-symbol")).toHaveAttribute("src", `/api/media/${branded.faviconKey}`);
+    await expect(page.locator('head link[rel="icon"]').first()).toHaveAttribute("href", `/api/media/${branded.faviconKey}`);
+    const visitor = await browser.newContext(); const guest = await visitor.newPage();
+    try {
+      expect((await visitor.request.get(`/api/media/${branded.logoKey}`)).status()).toBe(200);
+      expect((await visitor.request.get(`/api/media/${branded.faviconKey}`)).status()).toBe(200);
+      await guest.setViewportSize({ width: 390, height: 844 }); await guest.goto("/"); await expect(guest.locator(".store-header .brand-logo")).toBeVisible();
+      expect(await guest.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await guest.setViewportSize({ width: 1440, height: 1000 }); await guest.goto("/login"); await expect(guest.locator(".login-story .brand-wordmark")).toHaveText(`Garage ${f.run}`);
+      await login(guest, f.otherEmail, f.password); await expect(guest.locator(".dashboard-sidebar .brand-wordmark")).toHaveText(`Garage ${f.run}`);
+      await expect(guest.locator(".dashboard-sidebar .brand-symbol")).toHaveAttribute("src", `/api/media/${branded.faviconKey}`);
+    } finally { await visitor.close(); }
+    await page.goto("/admin/settings"); await expect(page.locator(".dashboard-sidebar .brand-wordmark")).toHaveText(`Garage ${f.run}`);
     if (product) {
       const updated = { id: product.id, name: product.name, slug: product.slug, description: product.description, categoryId: product.categoryId, status: "PUBLISHED", featured: product.featured, variants: product.variants.map((v: { id: string; name: string; sku: string; costMinor: number; priceMinor: number; discountMinor: number | null; commissionMinor: number | null; stock: number; lowStock: number; active: boolean }) => ({ id: v.id, name: v.name, sku: v.sku, costMinor: v.costMinor, priceMinor: 1750, discountMinor: v.discountMinor, commissionMinor: v.commissionMinor, stock: v.stock + 2, lowStock: v.lowStock, active: v.active })) };
       expect((await page.request.post("/api/admin/products", { headers, data: updated })).ok()).toBeTruthy();

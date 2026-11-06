@@ -24,6 +24,8 @@ The owner-approved catalog presentation release additionally runs `scripts/apply
 
 ## Database connection limits
 
+The approved FuryCar branding release additionally runs `scripts/apply-brand-release.ts` on the same guarded primary target. Its source plan is `branding/furycar/release.json`, and it requires the owner's completed catalog-presentation receipt. The name/domain/logo/favicon snapshot must still match before only the requested name/logo/favicon are updated. The two checksum-verified assets use configured private storage, and one hash-bound audit receipt prevents repeat deployments from overwriting later owner edits. No new environment variables, schema migration, domain/DNS changes or account setup are involved. Unrelated installations and previews retain their existing branding.
+
 Runtime workers reuse one Prisma client, including production route bundles. Their PostgreSQL pool defaults to **one connection per worker**, releases idle connections after one second, and queues parallel queries within that budget. `DATABASE_POOL_MAX` can explicitly set a budget of 1–10; increase it only after accounting for the provider's total role limit and the number of workers/deployments. The PostgreSQL URL and TLS verification are preserved.
 
 Store settings reads are memoized only within one server-render request, so metadata, layouts and the page share the read. New requests still see administrator edits without a rebuild or persistent-cache invalidation.
