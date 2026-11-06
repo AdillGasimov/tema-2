@@ -71,6 +71,12 @@ Etibarlı referal linki standart olaraq 30 gün yadda qalır. Birbaşa giriş on
 5. Çatdırılma təsdiqlənib, amma ödəniş tam deyilsə sifariş **Çatdırılıb** qalır. Son ödənişi qeydə alanda sistem onu avtomatik tamamlayır. Əvvəldən çatdırılmış və tam ödənilmiş sifarişlərdə görünən **Tamamla** düyməsi də bir kliklə işləyir. Sifarişin qiymətləri və maya dəyəri dəyişmir; tamamlama əlavə ödəniş və ya ikinci stok çıxışı yaratmır.
 6. Ləğv, qaytarma və istəyə bağlı ətraflı statuslar üçün **Digər status əməliyyatları** bölməsini açın. Ləğv və ya qaytarma pulu avtomatik geri köçürmür; faktiki geri ödənişi ayrıca qeydə alın. Komissiya uyğun qaydada geri çevrilir.
 
+## Ana səhifənin görünüşü
+
+**Tənzimləmələr → Vitrin və ana səhifə** bölməsində başlıq, alt mətn və əsas banner şəklini dəyişin. **Ana başlıq** sahəsində Enter ilə sətir ayırmaq olar; digər tənzimləmələri saxlayanda bu sətirlər itmir. Öz bannerinizi seçmədikdə dizayna daxil edilmiş avtomobil fotosu göstərilir. Şəxsi banner üçün üfüqi, təxminən 16:9 ölçülü, mətnin yerləşəcəyi sol hissəsi sadə foto seçin.
+
+Kateqoriya şəkilləri və məhsul sayları yalnız yayımlanmış kataloqdan götürülür. Seçilmiş məhsul yoxdursa, ilk məhsul bölməsində həqiqi yeni məhsullar göstərilir; eyni siyahı aşağıda təkrarlanmır. Ayrı yeni məhsul bölməsi, seçilmiş məhsullar və kateqoriyalar əvvəlki seçim düymələri ilə idarə edilir. Ana səhifənin qulluq fotosu ümumi vizualdır; məhsul kartlarında hər məhsulun öz qalereya şəkli qalır.
+
 ## Komissiya və ödəniş
 
 **Tənzimləmələr** bölməsində standart komissiya, minimum sifariş, gözləmə müddəti və ödəniş tezliyi təyin edilir. Yeni qaydalar yalnız yeni sifarişlərə tətbiq olunur. Standart model hər uyğun sifariş üçün bir sabit komissiyadır; məhsul üzrə qayda olduqda ən yüksək məbləğ, tərəfdaşın fərdi qaydası olduqda isə həmin məbləğ istifadə olunur.

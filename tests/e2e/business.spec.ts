@@ -141,6 +141,7 @@ test("all management pages render; rebranding and product changes apply without 
   const headers = { Origin: "http://localhost:3100" };
   try {
     await page.getByLabel("Mağaza adı", { exact: true }).fill(`Garage ${f.run}`);
+    await page.getByLabel("Ana başlıq", { exact: true }).fill("Hər detalda\nmükəmməl qayğı.");
     await page.getByLabel("Loqo", { exact: true }).setInputFiles("branding/furycar/logo.png");
     await expect(page.locator('input[name="logoKey"]')).toHaveValue(/^images\//);
     await page.getByLabel("Favicon", { exact: true }).setInputFiles("branding/furycar/favicon.png");
@@ -148,11 +149,23 @@ test("all management pages render; rebranding and product changes apply without 
     const brandSaved = page.waitForResponse(r => r.url().endsWith("/api/admin/settings") && r.request().method() === "POST");
     await page.getByRole("button", { name: "Bütün tənzimləmələri saxla", exact: true }).click(); const saved = await brandSaved; expect(saved.ok()).toBeTruthy();
     const branded = await saved.json();
+    expect(branded.heroTitle).toBe("Hər detalda\nmükəmməl qayğı.");
     await page.goto("/"); await expect(page.getByRole("link", { name: `Garage ${f.run}`, exact: true }).first()).toBeVisible(); expect(await page.title()).toContain(`Garage ${f.run}`);
     await expect(page.locator(".store-header .brand-logo")).toHaveAttribute("src", `/api/media/${branded.logoKey}`);
     await expect(page.locator(".store-footer .brand-wordmark")).toHaveText(`Garage ${f.run}`);
     await expect(page.locator(".store-footer .brand-symbol")).toHaveAttribute("src", `/api/media/${branded.faviconKey}`);
     await expect(page.locator('head link[rel="icon"]').first()).toHaveAttribute("href", `/api/media/${branded.faviconKey}`);
+    const customHome = { ...settings, brandName: `Garage ${f.run}`, logoKey: branded.logoKey, faviconKey: branded.faviconKey,
+      heroTitle: `Avtomobiliniz üçün ${f.run}`, heroSubtitle: "Gündəlik qulluq üçün öz seçiminiz.", heroImageKey: branded.logoKey,
+      showCategories: false, showFeatured: false, showNewArrivals: false };
+    expect((await page.request.post("/api/admin/settings", { headers, data: { settings: customHome, rule: initial.rule } })).ok()).toBeTruthy();
+    await page.goto("/"); await expect(page.locator("#home-title")).toHaveText(customHome.heroTitle);
+    await expect(page.locator(".landing-hero-description")).toHaveText(customHome.heroSubtitle);
+    await expect(page.locator(".landing-hero-media img")).toHaveAttribute("src", `/api/media/${branded.logoKey}`);
+    await expect(page.locator("#categories-title, #featured-title, #arrivals-title")).toHaveCount(0);
+    expect((await page.request.post("/api/admin/settings", { headers, data: { settings: { ...customHome, heroImageKey: null, showCategories: true, showFeatured: true, showNewArrivals: true }, rule: initial.rule } })).ok()).toBeTruthy();
+    await page.goto("/"); await expect(page.locator(".landing-hero-media img")).toHaveAttribute("src", "/images/storefront/hero.webp");
+    await expect(page.locator("#categories-title")).toBeVisible(); await expect(page.locator("#featured-title")).toBeVisible();
     const visitor = await browser.newContext(); const guest = await visitor.newPage();
     try {
       expect((await visitor.request.get(`/api/media/${branded.logoKey}`)).status()).toBe(200);
@@ -174,7 +187,32 @@ test("all management pages render; rebranding and product changes apply without 
   expect(errors).toEqual([]);
 });
 test("responsive storefront has no horizontal overflow or console errors", async ({ page }) => {
-  for (const width of [390, 768, 1440]) { await page.setViewportSize({ width, height: 900 }); await page.goto("/"); await expect(page.getByRole("heading", { level: 1 })).toBeVisible(); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); await page.screenshot({ path: `test-results/storefront-${width}.png`, fullPage: true }); }
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  for (const width of [360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 }); await page.goto("/"); await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator(".landing-hero-media img")).toHaveJSProperty("complete", true);
+    expect(await page.locator(".landing-hero-media img").evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(1000);
+    await page.evaluate(() => document.fonts.ready);
+    const type = await page.evaluate(() => ({ body: getComputedStyle(document.querySelector(".storefront")!).fontSize,
+      title: parseFloat(getComputedStyle(document.querySelector("#home-title")!).fontSize),
+      copy: parseFloat(getComputedStyle(document.querySelector(".landing-hero-description")!).fontSize),
+      font: document.fonts.check('16px Inter', 'ƏəĞğİıÖöŞşÇçÜü') }));
+    expect(type.body).toBe("16px"); expect(type.title).toBeGreaterThanOrEqual(33); expect(type.title).toBeLessThanOrEqual(68); expect(type.copy).toBeGreaterThanOrEqual(15); expect(type.font).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: `test-results/storefront-${width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/");
+  const menu = page.getByRole("button", { name: "Menyunu aç", exact: true });
+  await expect(menu).toHaveAttribute("aria-expanded", "false"); await menu.click(); await expect(menu).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("navigation", { name: "Əsas menyu" }).getByRole("link", { name: "Bütün məhsullar", exact: true }).click();
+  await expect(page).toHaveURL(/\/products$/); await expect(menu).toHaveAttribute("aria-expanded", "false");
+  const search = page.getByRole("textbox", { name: "Məhsul axtar", exact: true }); await expect(search).toBeVisible(); await search.fill("mikrofiber"); await search.press("Enter");
+  await expect(page).toHaveURL(/\/products\?q=mikrofiber$/);
+  for (const path of ["/products", "/cart", "/checkout"]) {
+    await page.goto(path); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    for (const field of await page.locator('.field input, .catalog-filters input').all()) expect(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
+  }
+  expect(errors).toEqual([]);
 });
 test("upload feedback handles hosted payload errors and refuses oversized files before sending them", async ({ page }) => {
   const f = fixture(); await login(page, f.email, f.password);
