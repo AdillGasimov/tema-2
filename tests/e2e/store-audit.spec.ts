@@ -97,11 +97,16 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
 
 test("old URLs return 301 directly to the current product and reserve their namespace", async ({ page }) => {
   const second = `${redirectProduct.slug}-qisa`, third = `${redirectProduct.slug}-son`;
+  expect((await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).ok()).toBe(true);
+  expect(await (await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).json()).toEqual({ slug: null });
+  expect((await page.request.get("/api/catalog/redirect?slug=invalid%2Fslug")).status()).toBe(400);
   expect((await admin.request.post("/api/admin/products", { headers: origin, data: update(redirectProduct, second) })).ok()).toBe(true);
   const next = { ...redirectProduct, slug: second }; expect((await admin.request.post("/api/admin/products", { headers: origin, data: update(next, third) })).ok()).toBe(true);
+  expect(await (await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).json()).toEqual({ slug: third });
   for (const old of [redirectProduct.slug, second]) { const r = await page.request.get(`/products/${old}?ref=ADIL01&x=1`, { maxRedirects: 0 }); expect(r.status()).toBe(301); expect(new URL(r.headers().location, "http://localhost:3100").toString()).toBe(`http://localhost:3100/products/${third}?ref=ADIL01&x=1`); }
   await page.goto(`/products/${redirectProduct.slug}`); await expect(page).toHaveURL(`http://localhost:3100/products/${third}`); await expect(page.getByRole("heading", { level: 1 })).toHaveText(redirectProduct.name);
   expect((await admin.request.post("/api/admin/product-trash", { headers: origin, data: { action: "delete", ids: [redirectProduct.id] } })).ok()).toBe(true);
+  expect(await (await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).json()).toEqual({ slug: null });
   expect((await page.request.get(`/products/${redirectProduct.slug}`, { maxRedirects: 0 })).status()).toBe(404);
 });
 
