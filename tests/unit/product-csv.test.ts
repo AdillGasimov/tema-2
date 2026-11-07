@@ -3,6 +3,11 @@ import { csv } from "../../src/lib/csv";
 import { MAX_PRODUCT_CSV_BYTES, MAX_PRODUCT_CSV_ROWS, parseProductCsv, parsePhotoCsv, productSlug } from "../../src/lib/product-csv";
 
 const headers = ["name", "sku", "price", "cost", "stock", "category", "description", "slug", "variant", "discount"];
+
+it("accepts an optional Azerbaijani short description without changing supplier prices", () => {
+  const parsed = parseProductCsv('name,sku,price,cost,stock,short_description\nDəsmal,SHORT,14.99,5,2,"Yumşaq, ikitərəfli mikrofiber dəsmal."');
+  expect(parsed.issues).toEqual([]); expect(parsed.rows[0].shortDescription).toBe("Yumşaq, ikitərəfli mikrofiber dəsmal."); expect(parsed.rows[0].variant.priceMinor).toBe(1499);
+});
 const row = ["Yaşıl mikrofiber dəsmal", "CLOTH-1", "14.99", "8.50", "12", "desmallar", "Nəmi hopdurur.", "", "Yaşıl", ""];
 describe("product CSV files", () => {
   it("reads BOM, Azerbaijani text and exact minor-unit amounts", () => {

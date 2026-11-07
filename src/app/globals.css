@@ -18,6 +18,7 @@
 
 .product-delete-button{color:#b42318;border-color:#e5b5af}
 .product-delete-button:hover{background:#fff3f1}
+.price-review-flag{color:#b42318;font-weight:600;white-space:normal}
 .product-bulk-actions{flex-wrap:wrap;gap:12px}
 .product-trash-hint{padding:0 24px;color:var(--muted,#6b7568)}
 .badge-deleted{color:#b42318;background:#fff0ed}

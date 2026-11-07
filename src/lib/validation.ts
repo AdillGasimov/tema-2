@@ -17,7 +17,8 @@ export const variantSchema = z.object({
 }).refine(v => v.discountMinor === null || v.discountMinor < v.priceMinor, { message: "Endirim qiyməti satış qiymətindən az olmalıdır." });
 export const productSchema = z.object({
   id: id.optional(), name: z.string().trim().min(2).max(160), slug: z.string().regex(/^[a-z0-9-]+$/).max(180),
-  description: z.string().max(10000), categoryId: id, status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]), featured: z.boolean(),
+  description: z.string().max(10000), shortDescription: z.string().trim().max(500).optional(), needsPriceReview: z.boolean().optional(),
+  categoryId: id, status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]), featured: z.boolean(),
   seoTitle: z.string().max(180).optional(), seoDescription: z.string().max(300).optional(), variants: z.array(variantSchema).min(1).max(30),
 }).strict();
 export const partnerSchema = z.object({
@@ -30,11 +31,13 @@ export const partnerSchema = z.object({
 const safeUrl = z.union([z.literal(""), z.url().refine(v => v.startsWith("https://"), "HTTPS ünvanı tələb olunur.")]);
 export const settingsSchema = z.object({
   brandName: z.string().trim().min(2).max(80), domain: z.url().refine(v => v.startsWith("https://") || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(v)),
+  legalName: z.string().trim().max(160).optional(), taxId: z.string().trim().regex(/^(?:\d{10})?$/, "VÖEN 10 rəqəmdən ibarət olmalıdır.").optional(), businessAddress: z.string().trim().max(500).optional(),
   description: z.string().max(500), logoKey: id.nullable(), faviconKey: id.nullable(), heroImageKey: id.nullable(),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   whatsapp: z.union([z.literal(""), phoneSchema]), phone: z.string().max(30), email: z.union([z.literal(""), z.email()]),
   instagram: safeUrl, tiktok: safeUrl, socialLinks: z.string().max(1000), announcement: z.string().max(200),
   heroTitle: z.string().min(1).max(160), heroSubtitle: z.string().max(500), deliveryInfo: z.string().max(1000), deliveryRegions: z.string().min(1).max(1000),
+  deliveryTime: z.string().trim().max(500).optional(), deliveryFreeRegions: z.string().trim().max(1000).optional(),
   deliveryFeeMinor: minor, freeDeliveryMinor: minor, attributionDays: z.number().int().min(1).max(365),
   showFeatured: z.boolean(), showNewArrivals: z.boolean(), showCategories: z.boolean(), sheetsEnabled: z.boolean(),
 }).strict();

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ArrowUpRight, Droplets, MessageCircle, Package, ScanLine, ShoppingBag, Sparkles } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalog";
+import { DeliveryDetails } from "./delivery-details";
 import { ProductCard } from "./product-card";
 import { TrustRow, type PublicSettings } from "./store-shell";
 
@@ -72,6 +73,6 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
     </section>
 
     <section className="container home-partner" aria-labelledby="partner-title"><div className="home-partner-icon"><ScanLine size={40} strokeWidth={1.3} /></div><div><p className="eyebrow">BİRLİKDƏ QAZANAQ</p><h2 id="partner-title">Tövsiyəniz dəyər qazansın.</h2><p>Fərdi referal kodu, QR kart və şəffaf komissiya tarixçəsi.</p></div><Link href="/partnership" className="btn btn-brand">Tərəfdaşlıq haqqında <ArrowUpRight size={18} /></Link></section>
-    <section className="container home-delivery" id="delivery" aria-label="Çatdırılma məlumatı"><strong>Çatdırılma haqqında</strong><p>{s.deliveryInfo}</p></section>
+    <DeliveryDetails settings={s} />
   </div>;
 }

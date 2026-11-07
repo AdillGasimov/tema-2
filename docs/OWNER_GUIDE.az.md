@@ -73,6 +73,14 @@ Etibarlı referal linki standart olaraq 30 gün yadda qalır. Birbaşa giriş on
 
 ## Ana səhifənin görünüşü
 
+**Biznes məlumatları:** Tənzimləmələrdə hüquqi şirkət/sahibkar adını, 10 rəqəmli VÖEN-i və biznes ünvanını doldurun. Bunlar saytda açıq göstərilir; boş hüquqi sahələr aşağı hissədə “—” qalır. Telefon üçün **Əlaqə telefonu** işlədilir, boşdursa mövcud WhatsApp nömrəsi göstərilir.
+
+**Çatdırılma:** bölgələr, pulsuz çatdırılma bölgələri, müddət və standart haqq həmin bölmədə dəyişir. Pulsuz bölgə adını bölgə siyahısındakı kimi yazın. Sifarişdə seçilən ünvana görə haqq avtomatik hesablanır; köhnə sifarişlərin haqqı dəyişmir. Razılaşdırılmış cari qayda: 28 May (Bakı) pulsuz, digər ünvanlar 5 ₼; 3 iş günü, rayonlara 4 iş günü. Dəqiq tarix WhatsApp-da təsdiqlənir.
+
+**Məhsul mətni və URL:** redaktədə **Qısa təsvir** yuxarıda, tam təsvir aşağıda göstərilir. CSV-də istəyə bağlı **Qısa təsvir** / `short_description` sütunu da qəbul olunur. Qısa Azərbaycan dilində URL seçin. Sonradan URL dəyişdikdə köhnə keçid avtomatik 301 ilə cari ünvana yönlənir; başqa məhsul həmin köhnə URL-ni götürə bilməz. Tək aktiv variant varsa seçim siyahısı göstərilmir.
+
+**Qiymət yoxlaması:** kataloqda “Qiyməti təsdiqləyin” xəbərdarlığı qiyməti avtomatik dəyişmir. Düzgün məbləği təsdiqləyib redaktədə qiyməti yazın, **Qiymət yoxlaması tələb olunur** işarəsini çıxarın və saxlayın. Tarixi sifariş qiymətləri qorunur. Günəşlik üçün 100 ₼ qiyməti ayrıca təsdiq gözləyir.
+
 **Tənzimləmələr → Vitrin və ana səhifə** bölməsində başlıq, alt mətn və əsas banner şəklini dəyişin. **Ana başlıq** sahəsində Enter ilə sətir ayırmaq olar; digər tənzimləmələri saxlayanda bu sətirlər itmir. Öz bannerinizi seçmədikdə dizayna daxil edilmiş avtomobil fotosu göstərilir. Şəxsi banner üçün üfüqi, təxminən 16:9 ölçülü, mətnin yerləşəcəyi sol hissəsi sadə foto seçin.
 
 Kateqoriya şəkilləri və məhsul sayları yalnız yayımlanmış kataloqdan götürülür. Seçilmiş məhsul yoxdursa, ilk məhsul bölməsində həqiqi yeni məhsullar göstərilir; eyni siyahı aşağıda təkrarlanmır. Ayrı yeni məhsul bölməsi, seçilmiş məhsullar və kateqoriyalar əvvəlki seçim düymələri ilə idarə edilir. Ana səhifənin qulluq fotosu ümumi vizualdır; məhsul kartlarında hər məhsulun öz qalereya şəkli qalır.

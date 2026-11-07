@@ -96,6 +96,8 @@ model Product {
   name           String
   slug           String           @unique
   description    String
+  shortDescription String          @default("")
+  needsPriceReview Boolean         @default(false)
   categoryId     String
   category       ProductCategory  @relation(fields: [categoryId], references: [id])
   status         String           @default("DRAFT")
@@ -106,8 +108,18 @@ model Product {
   updatedAt      DateTime         @updatedAt
   variants       ProductVariant[]
   images         ProductImage[]
+  slugAliases    ProductSlugAlias[]
 
   @@index([status, categoryId])
+}
+
+model ProductSlugAlias {
+  oldSlug   String   @id
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
 }
 
 model ProductVariant {
@@ -398,6 +410,9 @@ model Notification {
 model StoreSettings {
   id                String   @id @default("store")
   brandName         String
+  legalName         String   @default("")
+  taxId             String   @default("")
+  businessAddress   String   @default("")
   domain            String
   description       String
   logoKey           String?
@@ -416,6 +431,8 @@ model StoreSettings {
   heroImageKey      String?
   deliveryInfo      String
   deliveryRegions   String   @default("Bakı, Abşeron, Digər bölgələr")
+  deliveryTime      String   @default("")
+  deliveryFreeRegions String @default("")
   deliveryFeeMinor  Int      @default(0)
   freeDeliveryMinor Int      @default(0)
   attributionDays   Int      @default(30)

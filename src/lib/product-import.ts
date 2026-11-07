@@ -6,12 +6,13 @@ import { AppError } from "./errors";
 import { parseProductCsv, parsePhotoCsv, type CsvIssue, type CsvProductRow } from "./product-csv";
 import { productSchema } from "./validation";
 import { MAX_PRODUCT_PHOTOS } from "./product-photo-policy";
+import { lockProductSlugs } from "./product-slugs";
 
 export type ProductPhotoJob = { sku: string; url: string };
 export type ProductImportPreview = { kind: "products" | "photos"; productCount: number; variantCount: number; photos: ProductPhotoJob[]; issues: CsvIssue[]; rows: { line: number; name: string; variant: string; sku: string; category: string; priceMinor: number | null; costMinor: number | null; stock: number | null; imageCount: number }[] };
 export type ProductImportResult = { productCount: number; variantCount: number };
 type Plan = ProductImportPreview & { products: z.infer<typeof productSchema>[] };
-type Reader = Pick<Tx, "productCategory" | "product" | "productVariant">;
+type Reader = Pick<Tx, "productCategory" | "product" | "productVariant" | "productSlugAlias">;
 const receiptSchema = z.object({ requestHash: z.string(), productCount: z.number().int(), variantCount: z.number().int() });
 
 async function planCsv(csv: string, defaultCategoryId: string | undefined, reader: Reader): Promise<Plan> {
@@ -28,7 +29,7 @@ async function planCsv(csv: string, defaultCategoryId: string | undefined, reade
     skus.add(row.variant.sku);
     const group = groups.get(row.slug);
     if (group) {
-      if (group.first.name !== row.name || group.first.description !== row.description || group.categoryId !== category.id) issues.push({ line: row.line, message: "Eyni URL adına aid variantlarda məhsul adı, təsvir və kateqoriya eyni olmalıdır." });
+      if (group.first.name !== row.name || group.first.description !== row.description || (group.first.shortDescription ?? "") !== (row.shortDescription ?? "") || group.categoryId !== category.id) issues.push({ line: row.line, message: "Eyni URL adına aid variantlarda məhsul adı, təsvirlər və kateqoriya eyni olmalıdır." });
       if (group.rows.some(r => r.variant.name === row.variant.name)) issues.push({ line: row.line, message: "Eyni məhsulun variant adları fərqli olmalıdır." });
       group.rows.push(row);
       if (group.rows.length > 30) issues.push({ line: row.line, message: "Bir məhsulda ən çox 30 variant ola bilər." });
@@ -42,14 +43,17 @@ async function planCsv(csv: string, defaultCategoryId: string | undefined, reade
     photos.push(...urls.map(url => ({ sku: group.first.variant.sku, url })));
   }
   const existingProducts = await reader.product.findMany({ where: { slug: { in: [...groups.keys()] } }, select: { slug: true, status: true } });
+  const aliases = await reader.productSlugAlias.findMany({ where: { oldSlug: { in: [...groups.keys()] } }, select: { oldSlug: true } });
+  const aliasSlugs = new Set(aliases.map(a => a.oldSlug));
   const existingVariants = await reader.productVariant.findMany({ where: { sku: { in: [...skus] } }, select: { sku: true, product: { select: { status: true } } } });
   const existingSlugs = new Set(existingProducts.map(p => p.slug)), existingSkus = new Set(existingVariants.map(v => v.sku));
   const deletedSlugs = new Set(existingProducts.filter(p => p.status === "DELETED").map(p => p.slug)), deletedSkus = new Set(existingVariants.filter(v => v.product.status === "DELETED").map(v => v.sku));
   for (const row of parsed.rows) {
+    if (aliasSlugs.has(row.slug) && !existingSlugs.has(row.slug)) issues.push({ line: row.line, message: `URL adı əvvəlki məhsul ünvanı üçün saxlanılıb: ${row.slug}. Başqa URL adı seçin.` });
     if (existingSlugs.has(row.slug)) issues.push({ line: row.line, message: deletedSlugs.has(row.slug) ? `URL adı silinmiş məhsula aiddir: ${row.slug}. Silinmişlər bölməsindən bərpa edin və ya fərqli URL adı seçin.` : `URL adı artıq mağazada var: ${row.slug}.` });
     if (existingSkus.has(row.variant.sku)) issues.push({ line: row.line, message: deletedSkus.has(row.variant.sku) ? `SKU silinmiş məhsula aiddir: ${row.variant.sku}. Silinmişlər bölməsindən bərpa edin və ya fərqli SKU seçin.` : `SKU artıq mağazada var: ${row.variant.sku}.` });
   }
-  const products = issues.length ? [] : [...groups.values()].map(g => productSchema.parse({ name: g.first.name, slug: g.first.slug, description: g.first.description, categoryId: g.categoryId, status: "DRAFT", featured: false, variants: g.rows.map(r => r.variant) }));
+  const products = issues.length ? [] : [...groups.values()].map(g => productSchema.parse({ name: g.first.name, slug: g.first.slug, description: g.first.description, ...(g.first.shortDescription ? { shortDescription: g.first.shortDescription } : {}), categoryId: g.categoryId, status: "DRAFT", featured: false, variants: g.rows.map(r => r.variant) }));
   return { kind: "products", productCount: groups.size, variantCount: preview.length, photos, issues, rows: preview, products };
 }
 
@@ -97,6 +101,7 @@ export async function importProducts(csv: string, defaultCategoryId: string | un
   }
   try {
     return await transaction(async tx => {
+      await lockProductSlugs(tx);
       const previous = await replay(tx); if (previous) return previous;
       const plan = await planCsv(csv, defaultCategoryId, tx);
       if (plan.issues.length) throw new AppError(`İdxal saxlanılmadı. Sətir ${plan.issues[0].line}: ${plan.issues[0].message}`, 409);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, transaction, type Tx } from "./db";
 import { AppError } from "./errors";
 import { checkoutSchema, codeSchema, id, minor } from "./validation";
+import { deliveryCharge } from "./delivery";
 import { paymentState } from "./money";
 import { transitions, canConfirmDelivery } from "./order-status";
 export { transitions } from "./order-status";
@@ -62,7 +63,7 @@ export async function createOrder(raw: unknown, cookieCode?: string | null) {
       await tx.productVariant.update({ where: { id: variantId }, data: { reserved: { increment: quantity } } });
     }
     if (subtotalMinor > 100_000_000) throw new AppError("Sifariş məbləği icazə verilən həddi keçir.");
-    const deliveryChargedMinor = settings.freeDeliveryMinor > 0 && subtotalMinor >= settings.freeDeliveryMinor ? 0 : settings.deliveryFeeMinor;
+    const deliveryChargedMinor = deliveryCharge(settings, subtotalMinor, input.city);
     const rule = await tx.commissionRule.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
     const customer = await tx.customer.upsert({ where: { phone: input.phone }, create: { name: input.name, phone: input.phone }, update: { name: input.name } });
     const order = await tx.order.create({ data: {

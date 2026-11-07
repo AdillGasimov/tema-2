@@ -6,6 +6,7 @@ import { audit, approveCommission, createPayout, updateOrder, expireReservations
 import { productSchema, partnerSchema, settingsSchema, id, minor } from "./validation";
 import { provisionAccount } from "./accounts";
 import { analytics } from "./analytics";
+import { assertProductSlugAvailable, lockProductSlugs, retainProductSlug } from "./product-slugs";
 
 export const adminResources = ["overview", "products", "categories", "inventory", "orders", "customers", "partners", "cards", "commissions", "payouts", "analytics", "expenses", "reports", "settings", "disputes", "notifications", "audit", "integrations"] as const;
 export async function getAdminData(resource: string, query = new URLSearchParams()) {
@@ -47,7 +48,11 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
     const v = productSchema.parse(raw);
     return transaction(async tx => {
       const { variants, id: productId, ...data } = v;
+      await lockProductSlugs(tx);
+      await assertProductSlugAvailable(tx, data.slug, productId);
+      const previous = productId ? await tx.product.findUniqueOrThrow({ where: { id: productId, status: { not: "DELETED" } }, select: { slug: true } }) : null;
       const product = productId ? await tx.product.update({ where: { id: productId, status: { not: "DELETED" } }, data }) : await tx.product.create({ data });
+      if (previous && previous.slug !== product.slug) await retainProductSlug(tx, product.id, previous.slug);
       const current = await tx.productVariant.findMany({ where: { productId: product.id } });
       const kept: string[] = [];
       for (const variant of variants) {
@@ -61,7 +66,7 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
         if (delta) await tx.inventoryMovement.create({ data: { variantId: saved.id, kind: "ADJUSTMENT", quantity: delta, reason: "Məhsul forması ilə stok yeniləndi" } });
       }
       await tx.productVariant.updateMany({ where: { productId: product.id, id: { notIn: kept } }, data: { active: false } });
-      await audit(tx, actorId, productId ? "product.update" : "product.create", "Product", product.id, { status: product.status });
+      await audit(tx, actorId, productId ? "product.update" : "product.create", "Product", product.id, { status: product.status, ...(previous && previous.slug !== product.slug ? { previousSlug: previous.slug, slug: product.slug } : {}) });
       return product;
     });
   }

@@ -16,7 +16,7 @@ export function ProductCard({ product: p }: { product: PublicProduct }) {
     <div className="product-card-info">
       <span className="eyebrow">{p.category.name}</span>
       <Link href={`/products/${p.slug}`} className="product-title-link" title={p.name}><h3>{p.name}</h3></Link>
-      <div className="product-price"><span className="product-price-amounts"><strong>{money(v.discountMinor ?? v.priceMinor)}</strong>{v.discountMinor !== null && <del>{money(v.priceMinor)}</del>}</span><span className={available ? "in-stock" : "out-stock"}><i />{available ? "Stokda" : "Bitib"}</span></div>
+      <div className="product-price"><span className="product-price-amounts"><strong>{money(v.discountMinor ?? v.priceMinor)}</strong>{v.discountMinor !== null && <del>{money(v.priceMinor)}</del>}</span><span className={available ? "in-stock" : "out-stock"}><i />{available ? "Stokda" : "Stokda yoxdur"}</span></div>
     </div>
   </article>;
 }

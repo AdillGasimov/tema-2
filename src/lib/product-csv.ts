@@ -6,9 +6,9 @@ import { productPhotoUrls } from "./product-photo-policy";
 
 export const MAX_PRODUCT_CSV_BYTES = 512 * 1024;
 export const MAX_PRODUCT_CSV_ROWS = 200;
-export const PRODUCT_CSV_HEADERS = ["Məhsul", "SKU", "Satış AZN", "Maya AZN", "Stok", "Kateqoriya", "Təsvir", "URL adı", "Variant", "Endirim AZN", "image_urls"];
+export const PRODUCT_CSV_HEADERS = ["Məhsul", "SKU", "Satış AZN", "Maya AZN", "Stok", "Kateqoriya", "Təsvir", "URL adı", "Variant", "Endirim AZN", "image_urls", "Qısa təsvir"];
 export type CsvIssue = { line: number; message: string };
-export type CsvProductRow = { line: number; name: string; slug: string; description: string; category: string; imageUrls: string[]; variant: ReturnType<typeof variantSchema.parse> };
+export type CsvProductRow = { line: number; name: string; slug: string; description: string; shortDescription?: string; category: string; imageUrls: string[]; variant: ReturnType<typeof variantSchema.parse> };
 export type CsvPhotoRow = { line: number; sku: string; imageUrls: string[] };
 
 const aliases: Record<string, string[]> = {
@@ -16,6 +16,7 @@ const aliases: Record<string, string[]> = {
   sku: ["SKU"], price: ["Satış AZN", "Satış qiyməti", "price", "price_azn"],
   cost: ["Maya AZN", "Alış maya dəyəri", "cost", "cost_azn"], stock: ["Stok", "Stok sayı", "stock"],
   category: ["Kateqoriya", "category"], description: ["Təsvir", "description"],
+  shortDescription: ["Qısa təsvir", "short_description", "shortDescription", "subtitle"],
   slug: ["URL adı", "slug"], variant: ["Variant", "variant"], discount: ["Endirim AZN", "discount", "discount_azn"],
   imageUrls: ["image_urls", "image_url", "Şəkil URL-ləri"],
 };
@@ -90,7 +91,7 @@ export function parseProductCsv(text: string): { rows: CsvProductRow[]; issues: 
       const values = valuesFor(record, keys);
       for (const [k, label] of [["name", "Məhsul"], ["sku", "SKU"], ["price", "Satış AZN"], ["cost", "Maya AZN"], ["stock", "Stok"]]) if (!values[k]) throw new AppError(`${label} sahəsi boşdur.`);
       if (!/^\d{1,7}$/.test(values.stock)) throw new AppError("Stok 0–1000000 arası tam ədəd olmalıdır.");
-      const meta = productSchema.pick({ name: true, slug: true, description: true }).parse({ name: values.name, slug: values.slug || productSlug(values.name), description: values.description || "" });
+      const meta = productSchema.pick({ name: true, slug: true, description: true, shortDescription: true }).parse({ name: values.name, slug: values.slug || productSlug(values.name), description: values.description || "", ...(values.shortDescription ? { shortDescription: values.shortDescription } : {}) });
       const variant = variantSchema.parse({ name: values.variant || "Standart", sku: values.sku, costMinor: toMinor(values.cost), priceMinor: toMinor(values.price), stock: Number(values.stock), discountMinor: values.discount ? toMinor(values.discount) : null });
       if ((values.category || "").length > 160) throw new AppError("Kateqoriya adı çox uzundur.");
       rows.push({ line: record.line, ...meta, category: values.category || "", imageUrls: productPhotoUrls(values.imageUrls || ""), variant });
