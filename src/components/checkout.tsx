@@ -17,7 +17,10 @@ export function CartView({ deliveryFreeRegions }: { deliveryFreeRegions: string 
 }
 export function CheckoutForm({ settings: s }: { settings: PublicSettings }) {
   const { items, clear } = useCart(); const [code, setCode] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState(() => {
+    const destinations = deliveryRegionList(s.deliveryRegions);
+    return deliveryRegionList(s.deliveryFreeRegions).find(region => destinations.includes(region)) ?? "";
+  });
   const [result, setResult] = useState<{ reference: string; totalMinor: number; whatsappUrl: string } | null>(null);
   useEffect(() => { fetch("/api/referrals").then(r => r.json()).then(d => setCode(d.code ?? "")); }, []);
   const subtotal = items.reduce((n, i) => n + i.priceMinor * i.quantity, 0);
