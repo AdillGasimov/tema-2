@@ -1,4 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Locator } from "@playwright/test";
+async function expectOptimizedSource(image: Locator, source: string) {
+  await expect.poll(async () => { const src = await image.getAttribute("src"); return src ? new URL(src, "http://localhost:3100").searchParams.get("url") : null; }).toBe(source);
+}
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -90,7 +93,7 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
   await page.getByLabel("Referal kodu (istəyə bağlı)", { exact: true }).fill(fixture().foreignCode); await page.getByRole("button", { name: "Kodu tətbiq et" }).click(); await expect(page.locator('.summary-card [role="status"]')).toContainText(fixture().foreignCode);
   await page.getByRole("button", { name: `${single.name} sil`, exact: true }).click(); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
   await page.goto(`/products/${multi.slug}`); await expect(page.getByLabel("Variant", { exact: true })).toBeVisible(); await page.getByRole("button", { name: "Artır", exact: true }).click(); await page.getByLabel("Variant", { exact: true }).selectOption(multi.variants[1].id); await expect(page.locator('.purchase .quantity-control > span')).toHaveText("1"); await expect(page.locator('.detail-price')).toContainText("20,00");
-  await page.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true }).click(); await expect(page.locator('.detail-image img')).toHaveAttribute("src", `/api/media/${secondImage}`);
+  await page.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true }).click(); await expectOptimizedSource(page.locator('.detail-image img'), `/api/media/${secondImage}?public=1`);
   await page.getByRole("button", { name: "İndi sifariş et", exact: true }).click(); await expect(page).toHaveURL(/\/checkout$/); await expect(page.locator('.cart-storage-note')).toBeVisible();
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("28 May (Bakı)"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("0,00");
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("Bakı"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("5,00");
@@ -109,7 +112,7 @@ test("old URLs return 301 directly to the current product and reserve their name
   expect((await admin.request.post("/api/admin/products", { headers: origin, data: update(redirectProduct, second) })).ok()).toBe(true);
   const next = { ...redirectProduct, slug: second }; expect((await admin.request.post("/api/admin/products", { headers: origin, data: update(next, third) })).ok()).toBe(true);
   expect(await (await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).json()).toEqual({ slug: third });
-  for (const old of [redirectProduct.slug, second]) { const r = await page.request.get(`/products/${old}?ref=ADIL01&x=1`, { maxRedirects: 0 }); expect(r.status()).toBe(301); expect(new URL(r.headers().location, "http://localhost:3100").toString()).toBe(`http://localhost:3100/products/${third}?ref=ADIL01&x=1`); }
+  for (const old of [redirectProduct.slug, second]) { const r = await page.request.get(`/products/${old}?ref=ADIL01&x=1`, { maxRedirects: 0 }); expect(r.status()).toBe(301); expect(r.headers()["server-timing"]).toContain('desc="direct"'); expect(new URL(r.headers().location, "http://localhost:3100").toString()).toBe(`http://localhost:3100/products/${third}?ref=ADIL01&x=1`); }
   await page.goto(`/products/${redirectProduct.slug}`); await expect(page).toHaveURL(`http://localhost:3100/products/${third}`); await expect(page.getByRole("heading", { level: 1 })).toHaveText(redirectProduct.name);
   expect((await admin.request.post("/api/admin/product-trash", { headers: origin, data: { action: "delete", ids: [redirectProduct.id] } })).ok()).toBe(true);
   expect(await (await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).json()).toEqual({ slug: null });

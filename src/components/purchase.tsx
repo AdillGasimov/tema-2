@@ -1,4 +1,5 @@
 "use client";
+import { publicImageSrc } from "@/lib/public-image";
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import { availability } from "@/lib/availability";
 import { useCart } from "./cart-provider";
 export function Gallery({ images, name }: { images: PublicProduct["images"]; name: string }) {
   const [index, setIndex] = useState(0);
-  return <div><div className="detail-image">{images[index] ? <Image src={`/api/media/${images[index].key}`} alt={images[index].alt} fill sizes="(max-width: 768px) 100vw, 50vw" unoptimized priority /> : <span>Şəkil əlavə ediləcək</span>}</div><div className="thumbnails">{images.map((i, n) => <button key={i.id} className={n === index ? "selected" : ""} aria-label={`${name} şəkil ${n + 1}`} onClick={() => setIndex(n)}><Image src={`/api/media/${i.key}`} width={72} height={72} alt={i.alt} unoptimized /></button>)}</div></div>;
+  return <div><div className="detail-image">{images[index] ? <Image src={publicImageSrc(images[index].key)} alt={images[index].alt} fill sizes="(max-width: 768px) 100vw, 50vw" priority /> : <span>Şəkil əlavə ediləcək</span>}</div><div className="thumbnails">{images.map((i, n) => <button key={i.id} className={n === index ? "selected" : ""} aria-label={`${name} şəkil ${n + 1}`} onClick={() => setIndex(n)}><Image src={publicImageSrc(i.key)} width={72} height={72} alt={i.alt} /></button>)}</div></div>;
 }
 export function Purchase({ product: p }: { product: PublicProduct }) {
   const [variantId, setVariantId] = useState(p.variants.find(v => v.stock > v.reserved)?.id ?? p.variants[0]?.id);

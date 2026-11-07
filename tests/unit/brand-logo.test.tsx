@@ -5,12 +5,12 @@ const logoKey = "images/00000000-0000-4000-8000-000000000001.webp";
 const faviconKey = "images/00000000-0000-4000-8000-000000000002.webp";
 describe("database-driven brand lockups", () => {
   it("uses the approved full logo on light surfaces", () => {
-    const html = renderToStaticMarkup(<BrandLogo brandName="FuryCar" logoKey={logoKey} faviconKey={faviconKey} />);
-    expect(html).toContain(`/api/media/${logoKey}`); expect(html).toContain('alt="FuryCar"'); expect(html).not.toContain(`/api/media/${faviconKey}`);
+    const html = decodeURIComponent(renderToStaticMarkup(<BrandLogo brandName="FuryCar" logoKey={logoKey} faviconKey={faviconKey} />));
+    expect(html).toContain(`/_next/image?url=/api/media/${logoKey}?public=1`); expect(html).toContain('alt="FuryCar"'); expect(html).not.toContain(`/api/media/${faviconKey}`);
   });
   it("uses the matching symbol and readable name on dark surfaces", () => {
-    const html = renderToStaticMarkup(<BrandLogo brandName="FuryCar" logoKey={logoKey} faviconKey={faviconKey} dark />);
-    expect(html).toContain(`/api/media/${faviconKey}`); expect(html).toContain("brand-wordmark-custom"); expect(html).toContain("FuryCar"); expect(html).not.toContain(`/api/media/${logoKey}`);
+    const html = decodeURIComponent(renderToStaticMarkup(<BrandLogo brandName="FuryCar" logoKey={logoKey} faviconKey={faviconKey} dark />));
+    expect(html).toContain(`/_next/image?url=/api/media/${faviconKey}?public=1`); expect(html).toContain("brand-wordmark-custom"); expect(html).toContain("FuryCar"); expect(html).not.toContain(`/api/media/${logoKey}`);
   });
   it("backs logos without a separate symbol with a light panel on dark surfaces", () => {
     const html = renderToStaticMarkup(<BrandLogo brandName="Owner store" logoKey={logoKey} dark />);

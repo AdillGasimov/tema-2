@@ -1,3 +1,4 @@
+import { publicImageSrc } from "@/lib/public-image";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ArrowUpRight, Droplets, MessageCircle, Package, ScanLine, ShoppingBag, Sparkles } from "lucide-react";
@@ -18,9 +19,9 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
   return <div className="home-page">
     <section className="landing-hero" aria-labelledby="home-title">
       <div className="landing-hero-media">
-        <Image src={s.heroImageKey ? `/api/media/${s.heroImageKey}` : "/images/storefront/hero.webp"}
+        <Image src={s.heroImageKey ? publicImageSrc(s.heroImageKey) : "/images/storefront/hero.webp"}
           alt={s.heroImageKey ? "Avtomobilə qulluq kolleksiyası" : "İşıqlı studiyada parıldayan tünd rəngli avtomobil"}
-          fill sizes="100vw" unoptimized priority />
+          fill sizes="100vw" priority />
       </div>
       <div className="landing-hero-shade" />
       <div className="container landing-hero-inner">
@@ -43,7 +44,7 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
     {s.showCategories && categories.length > 0 && <section className="container home-section" id="collection" aria-labelledby="categories-title">
       <div className="home-section-heading"><div><p className="eyebrow">KATEQORİYALAR</p><h2 id="categories-title">Axtardığınız, bir yerdə.</h2></div><Link href="/products" className="text-link">Bütün məhsullar <ArrowUpRight size={18} /></Link></div>
       <div className="home-categories">{categories.map(c => <Link href={`/products?category=${encodeURIComponent(c.slug)}`} key={c.id} className="home-category">
-        <div className="home-category-visual">{c.image ? <Image src={`/api/media/${c.image.key}`} alt="" fill sizes="88px" unoptimized /> : <Droplets size={36} strokeWidth={1.2} />}</div>
+        <div className="home-category-visual">{c.image ? <Image src={publicImageSrc(c.image.key)} alt="" fill sizes="88px" /> : <Droplets size={36} strokeWidth={1.2} />}</div>
         <div><h3>{c.name}</h3><span>{c.productCount} məhsul</span></div><ArrowUpRight size={18} className="home-category-arrow" />
       </Link>)}</div>
     </section>}
@@ -54,7 +55,7 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
     </section>}
 
     <section className="container home-editorial" aria-labelledby="care-title">
-      <div className="home-editorial-image"><Image src="/images/storefront/care.webp" alt="Mikrofiber dəsmalla avtomobilin üzərindəki su damcılarının silinməsi" fill sizes="(max-width: 760px) 100vw, 48vw" unoptimized /></div>
+      <div className="home-editorial-image"><Image src="/images/storefront/care.webp" alt="Mikrofiber dəsmalla avtomobilin üzərindəki su damcılarının silinməsi" fill sizes="(max-width: 760px) 100vw, 48vw" /></div>
       <div className="home-editorial-copy"><p className="eyebrow">HƏR GÜN BİR AZ QAYĞI</p><h2 id="care-title">Yaxşı görünüş<br />detallardan başlayır.</h2><p>Təmiz səthlər, rahat salon və xoş bir yol. Avtomobiliniz üçün gündəlik qulluq vasitələrini bir yerdə kəşf edin.</p><div className="home-editorial-points"><span><Droplets size={18} /> Gündəlik təmizlik</span><span><Sparkles size={18} /> Salon rahatlığı</span></div><Link className="btn btn-dark" href="/products">Kolleksiyaya bax <ArrowUpRight size={18} /></Link></div>
     </section>
 

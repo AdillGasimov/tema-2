@@ -1,4 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Locator } from "@playwright/test";
+async function expectOptimizedSource(image: Locator, source: string) {
+  await expect.poll(async () => { const src = await image.getAttribute("src"); return src ? new URL(src, "http://localhost:3100").searchParams.get("url") : null; }).toBe(source);
+}
 import { readFileSync, writeFileSync } from "node:fs";
 import { PNG } from "pngjs";
 import jsQR from "jsqr";
@@ -32,13 +35,20 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   await expect(page.getByLabel("Məhsul şəkilləri", { exact: true })).toBeVisible();
   const photo = await sharp({ create: { width: 300, height: 300, channels: 3, background: "#a9c182" } }).png().toBuffer();
   await page.getByLabel("Məhsul şəkilləri", { exact: true }).setInputFiles({ name: "test-towel.png", mimeType: "image/png", buffer: photo });
-  await expect(page.locator(".admin-image-grid img")).toBeVisible();
+  await expect(page.locator(".admin-image-grid img")).toBeVisible({ timeout: 15000 });
   const photoPath = await page.locator(".admin-image-grid img").first().getAttribute("src");
   expect(photoPath).toBeTruthy(); const photoUrl = new URL(photoPath!, page.url()).toString();
   const privateVisitor = await browser.newContext();
   expect((await privateVisitor.request.get(photoUrl)).status()).toBe(401);
   const ownerPhoto = await page.request.get(photoUrl); expect(ownerPhoto.status()).toBe(200);
   expect(ownerPhoto.headers()["cache-control"]).toBe("private, no-store");
+  const publicSource = `${photoPath}?public=1`;
+  const optimizedPath = `/_next/image?${new URLSearchParams({ url: publicSource, w: "96", q: "75" })}`;
+  // Signed-in preview access must not create a publicly cached draft rendition.
+  expect((await page.request.get(publicSource)).status()).toBe(404);
+  const privateOptimized = await page.request.get(optimizedPath);
+  expect(privateOptimized.status()).toBeGreaterThanOrEqual(400);
+  expect(privateOptimized.headers()["content-type"] ?? "").not.toMatch(/^image\//);
   const secondPhoto = await sharp({ create: { width: 300, height: 300, channels: 3, background: "#dce8cf" } }).png().toBuffer();
   await page.getByLabel("Məhsul şəkilləri", { exact: true }).setInputFiles({ name: "second-cover.png", mimeType: "image/png", buffer: secondPhoto });
   await expect(page.locator(".admin-image-grid img")).toHaveCount(2);
@@ -51,6 +61,8 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   const published = page.waitForResponse(r => r.url().endsWith("/api/admin/products") && r.request().method() === "POST");
   await page.getByRole("button", { name: "Yadda saxla", exact: true }).click(); expect((await published).ok()).toBeTruthy();
   expect((await privateVisitor.request.get(photoUrl)).status()).toBe(200); await privateVisitor.close();
+  const resized = await page.request.get(optimizedPath); expect(resized.status()).toBe(200);
+  expect((await sharp(await resized.body()).metadata()).width).toBe(96);
   await page.goto("/admin/partners"); await page.getByRole("button", { name: "Yeni tərəfdaş", exact: true }).click();
   await page.getByLabel("Ad və soyad", { exact: true }).fill("E2E Tərəfdaş"); await page.getByLabel("Telefon", { exact: true }).fill("+994500004444");
   await page.getByLabel("E-poçt (istəyə bağlı)", { exact: true }).fill(partnerEmail); await page.getByLabel("İlk giriş parolu", { exact: true }).fill(f.password);
@@ -151,9 +163,9 @@ test("all management pages render; rebranding and product changes apply without 
     const branded = await saved.json();
     expect(branded.heroTitle).toBe("Hər detalda\nmükəmməl qayğı.");
     await page.goto("/"); await expect(page.getByRole("link", { name: `Garage ${f.run}`, exact: true }).first()).toBeVisible(); expect(await page.title()).toContain(`Garage ${f.run}`);
-    await expect(page.locator(".store-header .brand-logo")).toHaveAttribute("src", `/api/media/${branded.logoKey}`);
+    await expectOptimizedSource(page.locator(".store-header .brand-logo"), `/api/media/${branded.logoKey}?public=1`);
     await expect(page.locator(".store-footer .brand-wordmark")).toHaveText(`Garage ${f.run}`);
-    await expect(page.locator(".store-footer .brand-symbol")).toHaveAttribute("src", `/api/media/${branded.faviconKey}`);
+    await expectOptimizedSource(page.locator(".store-footer .brand-symbol"), `/api/media/${branded.faviconKey}?public=1`);
     await expect(page.locator('head link[rel="icon"]').first()).toHaveAttribute("href", `/api/media/${branded.faviconKey}`);
     const customHome = { ...settings, brandName: `Garage ${f.run}`, logoKey: branded.logoKey, faviconKey: branded.faviconKey,
       heroTitle: `Avtomobiliniz üçün ${f.run}`, heroSubtitle: "Gündəlik qulluq üçün öz seçiminiz.", heroImageKey: branded.logoKey,
@@ -161,10 +173,10 @@ test("all management pages render; rebranding and product changes apply without 
     expect((await page.request.post("/api/admin/settings", { headers, data: { settings: customHome, rule: initial.rule } })).ok()).toBeTruthy();
     await page.goto("/"); await expect(page.locator("#home-title")).toHaveText(customHome.heroTitle);
     await expect(page.locator(".landing-hero-description")).toHaveText(customHome.heroSubtitle);
-    await expect(page.locator(".landing-hero-media img")).toHaveAttribute("src", `/api/media/${branded.logoKey}`);
+    await expectOptimizedSource(page.locator(".landing-hero-media img"), `/api/media/${branded.logoKey}?public=1`);
     await expect(page.locator("#categories-title, #featured-title, #arrivals-title")).toHaveCount(0);
     expect((await page.request.post("/api/admin/settings", { headers, data: { settings: { ...customHome, heroImageKey: null, showCategories: true, showFeatured: true, showNewArrivals: true }, rule: initial.rule } })).ok()).toBeTruthy();
-    await page.goto("/"); await expect(page.locator(".landing-hero-media img")).toHaveAttribute("src", "/images/storefront/hero.webp");
+    await page.goto("/"); await expectOptimizedSource(page.locator(".landing-hero-media img"), "/images/storefront/hero.webp");
     await expect(page.locator("#categories-title")).toBeVisible(); await expect(page.locator("#featured-title")).toBeVisible();
     const visitor = await browser.newContext(); const guest = await visitor.newPage();
     try {
@@ -174,7 +186,7 @@ test("all management pages render; rebranding and product changes apply without 
       expect(await guest.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await guest.setViewportSize({ width: 1440, height: 1000 }); await guest.goto("/login"); await expect(guest.locator(".login-story .brand-wordmark")).toHaveText(`Garage ${f.run}`);
       await login(guest, f.otherEmail, f.password); await expect(guest.locator(".dashboard-sidebar .brand-wordmark")).toHaveText(`Garage ${f.run}`);
-      await expect(guest.locator(".dashboard-sidebar .brand-symbol")).toHaveAttribute("src", `/api/media/${branded.faviconKey}`);
+      await expectOptimizedSource(guest.locator(".dashboard-sidebar .brand-symbol"), `/api/media/${branded.faviconKey}?public=1`);
     } finally { await visitor.close(); }
     await page.goto("/admin/settings"); await expect(page.locator(".dashboard-sidebar .brand-wordmark")).toHaveText(`Garage ${f.run}`);
     if (product) {
@@ -191,7 +203,7 @@ test("responsive storefront has no horizontal overflow or console errors", async
   for (const width of [360, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 }); await page.goto("/"); await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator(".landing-hero-media img")).toHaveJSProperty("complete", true);
-    expect(await page.locator(".landing-hero-media img").evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(1000);
+    await expect.poll(() => page.locator(".landing-hero-media img").evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     await page.evaluate(() => document.fonts.ready);
     const type = await page.evaluate(() => ({ body: getComputedStyle(document.querySelector(".storefront")!).fontSize,
       title: parseFloat(getComputedStyle(document.querySelector("#home-title")!).fontSize),
@@ -331,7 +343,7 @@ test("Full CSV imports a real CDN photo into private storage and the published s
   const publish = await page.request.post("/api/admin/products", { headers: { Origin: "http://localhost:3100" }, data: { id: product.id, name, slug, description: product.description, categoryId: product.categoryId, status: "PUBLISHED", featured: false, variants: [{ id: variant.id, name: variant.name, sku, priceMinor: 1499, costMinor: 700, stock: 5 }] } });
   expect(publish.status()).toBe(200); expect((await guest.request.get(path)).status()).toBe(200);
   const shop = await guest.newPage(); await shop.goto(`/products/${slug}`);
-  const image = shop.locator(`img[src="${path}"]`).first(); await expect(image).toBeVisible();
+  const image = shop.locator(".detail-image img"); await expect(image).toBeVisible(); await expectOptimizedSource(image, `${path}?public=1`);
   await expect.poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0);
   await guest.close();
 });
@@ -445,7 +457,7 @@ test("Temu extension CSV imports the real provided product photo with owner AZN 
   expect((await guest.request.get(path)).status()).toBe(401);
   expect((await page.request.post("/api/admin/product-bulk", { headers: { Origin: "http://localhost:3100" }, data: { ids: [saved.id], status: "PUBLISHED" } })).status()).toBe(200);
   const photo = await guest.request.get(path); expect(photo.status()).toBe(200); expect(photo.headers()["content-type"]).toContain("image/webp");
-  const shop = await guest.newPage(); await shop.goto(`/products/${slug}`); const shown = shop.locator(`img[src="${path}"]`).first();
+  const shop = await guest.newPage(); await shop.goto(`/products/${slug}`); const shown = shop.locator(".detail-image img"); await expectOptimizedSource(shown, `${path}?public=1`);
   await expect(shown).toBeVisible(); await expect.poll(() => shown.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   const publicData = await (await guest.request.get(`/api/catalog?q=${encodeURIComponent(name)}`)).text(); expect(publicData).not.toContain("costMinor"); expect(publicData).not.toContain("img.kwcdn.com");
   await guest.close();

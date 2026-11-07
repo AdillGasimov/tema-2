@@ -1,3 +1,4 @@
+import { publicImageSrc } from "@/lib/public-image";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Package } from "lucide-react";
@@ -10,7 +11,7 @@ export function ProductCard({ product: p }: { product: PublicProduct }) {
   const stock = availability(p.variants);
   return <article className="product-card">
     <Link href={`/products/${p.slug}`} className="product-visual" aria-label={p.name}>
-      {p.images[0] ? <span className="product-image-frame"><Image src={`/api/media/${p.images[0].key}`} alt={p.images[0].alt || p.name} fill sizes="(max-width: 600px) 45vw, (max-width: 1000px) 30vw, 24vw" unoptimized /></span> : <div className="product-placeholder"><Package size={56} strokeWidth={1} /><span>Şəkil əlavə ediləcək</span></div>}
+      {p.images[0] ? <span className="product-image-frame"><Image src={publicImageSrc(p.images[0].key)} alt={p.images[0].alt || p.name} fill sizes="(max-width: 600px) 45vw, (max-width: 1000px) 30vw, 24vw" /></span> : <div className="product-placeholder"><Package size={56} strokeWidth={1} /><span>Şəkil əlavə ediləcək</span></div>}
       {v.discountMinor !== null && <span className="product-tag">Endirim</span>}
       <span className="product-arrow" aria-hidden="true"><ArrowUpRight size={18} /></span>
     </Link>
