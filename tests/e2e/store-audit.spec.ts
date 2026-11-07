@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 const origin = { Origin: "http://localhost:3100" };
+const freeDelivery = "28 May (Bakı) üçün çatdırılma ödənişsizdir.";
 const fixture = () => JSON.parse(readFileSync(".local/e2e.json", "utf8")) as { run: string; email: string; password: string; foreignCode: string };
 async function signIn(page: Page, identifier: string, password: string) {
   await page.goto("/login"); await page.getByLabel("E-poçt və ya referal kodu", { exact: true }).fill(identifier); await page.getByLabel("Parol", { exact: true }).fill(password);
@@ -30,7 +31,7 @@ test.beforeAll(async ({ browser }) => {
   admin = await browser.newPage(); const f = fixture(); await signIn(admin, f.email, f.password);
   initial = await (await admin.request.get("/api/admin/settings")).json();
   const delivery = JSON.parse(readFileSync("catalog/curation/2026-11-07-content.json", "utf8")).delivery.after;
-  expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(initial.settings), ...delivery, deliveryInfo: "", heroImageKey: null, legalName: "", taxId: "", businessAddress: "" }, rule: initial.rule } })).ok()).toBe(true);
+  expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(initial.settings), ...delivery, announcement: freeDelivery, deliveryInfo: "", heroImageKey: null, legalName: "", taxId: "", businessAddress: "" }, rule: initial.rule } })).ok()).toBe(true);
   const categories = await (await admin.request.get("/api/admin/categories")).json();
   category = categories.find((c: { name: string }) => c.name === "Ətirləndiricilər");
   if (!category) category = await (await admin.request.post("/api/admin/categories", { headers: origin, data: { name: "Ətirləndiricilər", slug: `audit-etir-${suffix}` } })).json();
@@ -64,12 +65,13 @@ test("public policies, delivery, footer, category navigation and SEO are complet
     const title = await page.title(); expect(titles.has(title)).toBe(false); titles.add(title);
     const description = await page.locator('meta[name="description"]').getAttribute("content"); expect(description!.length).toBeGreaterThan(50); expect(descriptions.has(description!)).toBe(false); descriptions.add(description!);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `http://localhost:3100${path === "/" ? "" : path}`);
+    if (path !== "/login") { await expect(page.locator(".announcement > span").first()).toHaveText(freeDelivery); await expect(page.locator(".footer-tag")).toHaveText(freeDelivery); }
     if (path === "/privacy") expect(await page.locator("main").innerText()).not.toContain("Mağaza sahibi fəaliyyətə başlamazdan əvvəl");
     if (path === "/cart") { await expect(page.locator(".cart-storage-note")).toContainText("yalnız bu cihazdakı"); await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/); }
   }
   await page.goto("/"); await expect(page.getByRole("navigation", { name: "Əsas menyu" }).getByRole("link", { name: "Ətirləndiricilər", exact: true })).toHaveCount(1);
-  await expect(page.locator("#delivery")).toContainText("3 iş günü"); await expect(page.locator("#delivery")).toContainText("4 iş günü"); await expect(page.locator("#delivery")).toContainText("pulsuz"); await expect(page.locator("#delivery")).toContainText("5,00"); await expect(page.locator("#delivery")).toContainText("WhatsApp");
-  await expect(page.locator(".trust-row")).toContainText("28 May (Bakı) üçün pulsuz çatdırılma");
+  await expect(page.locator("#delivery")).toContainText("3 iş günü"); await expect(page.locator("#delivery")).toContainText("4 iş günü"); await expect(page.locator("#delivery")).toContainText(freeDelivery); await expect(page.locator("#delivery strong")).toHaveText(freeDelivery); await expect(page.locator("#delivery")).toContainText("5,00"); await expect(page.locator("#delivery")).toContainText("WhatsApp");
+  await expect(page.locator(".trust-row")).toContainText(freeDelivery);
   await expect(page.locator(".trust-row")).not.toContainText("Şərtlər sifariş zamanı dəqiqləşdirilir");
   await expect(page.locator("#delivery .delivery-extra")).toHaveCount(0);
   await page.locator('.store-footer a[href="/#delivery"]').click(); await expect(page).toHaveURL(/\/#delivery$/); await expect(page.locator("#delivery")).toBeInViewport();
@@ -85,16 +87,17 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
   await page.goto(`/products/${sold.slug}`); await expect(page.locator('.purchase select')).toHaveCount(0); await expect(page.locator('.purchase .out-stock')).toContainText("Stokda yoxdur");
   await expect(page.getByRole("button", { name: "Artır", exact: true })).toBeDisabled(); await expect(page.getByRole("button", { name: "Səbətə əlavə et", exact: true })).toBeDisabled(); await expect(page.getByRole("button", { name: "İndi sifariş et", exact: true })).toBeDisabled();
   await page.goto(`/products/${single.slug}`); await expect(page.locator('.purchase select')).toHaveCount(0); await expect(page.locator('.detail-short-description')).toHaveText(single.shortDescription);
+  await expect(page.locator(".purchase .in-stock")).toContainText("Stokda"); await expect(page.locator(".purchase .free-delivery-note")).toHaveText(freeDelivery);
   await expect(page.getByRole("button", { name: "Azalt", exact: true })).toBeDisabled(); await page.getByRole("button", { name: "Artır", exact: true }).click(); await expect(page.getByRole("button", { name: "Artır", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Azalt", exact: true }).click(); await page.getByRole("button", { name: "Səbətə əlavə et", exact: true }).click(); await page.getByRole("button", { name: "Səbətə əlavə edildi", exact: true }).click(); await expect(page.getByRole("button", { name: "Səbətə əlavə edildi", exact: true })).toBeDisabled();
-  await page.reload(); await page.goto("/cart"); await expect(page.locator(".cart-storage-note")).toBeVisible(); await expect(page.getByRole("button", { name: `${single.name} artır`, exact: true })).toBeDisabled();
+  await page.reload(); await page.goto("/cart"); await expect(page.locator(".summary-card .free-delivery-note")).toHaveText(freeDelivery); await expect(page.locator(".cart-storage-note")).toBeVisible(); await expect(page.getByRole("button", { name: `${single.name} artır`, exact: true })).toBeDisabled();
   await page.getByRole("button", { name: `${single.name} azalt`, exact: true }).click(); await page.getByRole("button", { name: `${single.name} artır`, exact: true }).click();
   const otherDevice = await browser.newContext(); try { const empty = await otherDevice.newPage(); await empty.goto("http://localhost:3100/cart"); await expect(empty.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible(); } finally { await otherDevice.close(); }
   await page.getByLabel("Referal kodu (istəyə bağlı)", { exact: true }).fill(fixture().foreignCode); await page.getByRole("button", { name: "Kodu tətbiq et" }).click(); await expect(page.locator('.summary-card [role="status"]')).toContainText(fixture().foreignCode);
   await page.getByRole("button", { name: `${single.name} sil`, exact: true }).click(); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
   await page.goto(`/products/${multi.slug}`); await expect(page.getByLabel("Variant", { exact: true })).toBeVisible(); await page.getByRole("button", { name: "Artır", exact: true }).click(); await page.getByLabel("Variant", { exact: true }).selectOption(multi.variants[1].id); await expect(page.locator('.purchase .quantity-control > span')).toHaveText("1"); await expect(page.locator('.detail-price')).toContainText("20,00");
   await page.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true }).click(); await expectOptimizedSource(page.locator('.detail-image img'), `/api/media/${secondImage}?public=1`);
-  await page.getByRole("button", { name: "İndi sifariş et", exact: true }).click(); await expect(page).toHaveURL(/\/checkout$/); await expect(page.locator('.cart-storage-note')).toBeVisible();
+  await page.getByRole("button", { name: "İndi sifariş et", exact: true }).click(); await expect(page).toHaveURL(/\/checkout$/); await expect(page.locator(".summary-card .free-delivery-note")).toHaveText(freeDelivery); await expect(page.locator('.cart-storage-note')).toBeVisible();
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("28 May (Bakı)"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("0,00");
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("Bakı"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("5,00");
   await page.getByLabel("Ad və soyad", { exact: true }).fill("Sınaq alıcısı"); await page.getByLabel("Telefon nömrəsi", { exact: true }).fill("+994500005566"); await page.getByLabel("Çatdırılma ünvanı", { exact: true }).fill("Sınaq ünvanı 12"); await page.locator('input[type="checkbox"]').check();

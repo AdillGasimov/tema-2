@@ -1,0 +1,107 @@
+{
+  "id": "owner-delivery-stock-2026-11-08",
+  "ownerMarker": "catalog-review:owner-catalog-followup-2026-11-07",
+  "ownerConfirmedAtLeastOne": true,
+  "settings": {
+    "announcement": "",
+    "deliveryFreeRegions": "28 May (Bakı)",
+    "deliveryFeeMinor": 500
+  },
+  "variants": [
+    {
+      "id": "b9a2b4a4-f52d-4039-94c7-2247d08642fe",
+      "productId": "962087c2-da51-4d2b-9e9d-2a74d2f46e47",
+      "storeSku": "FC-0003"
+    },
+    {
+      "id": "4f6c0bd4-a649-4711-a5a0-4b9108ad4317",
+      "productId": "829ac0e7-7cbf-4a47-8f0b-162b07d41c00",
+      "storeSku": "FC-0005"
+    },
+    {
+      "id": "cmw4yjz2h000108jmzj7jr9dx",
+      "productId": "829ac0e7-7cbf-4a47-8f0b-162b07d41c00",
+      "storeSku": "FC-0006"
+    },
+    {
+      "id": "4958f8a5-4978-4a63-aefd-84eac99d0dc2",
+      "productId": "306ae8f5-4c71-44b4-96de-e2c0792bab50",
+      "storeSku": "FC-0007"
+    },
+    {
+      "id": "d706a9b8-9782-4bde-b733-cacc7c333859",
+      "productId": "63a2f05b-a6d2-48b0-b9d2-1746fe9b68ee",
+      "storeSku": "FC-0009"
+    },
+    {
+      "id": "adfe0980-f9b2-40f6-a848-49dcb3ce60d5",
+      "productId": "6505862f-08e5-4487-b301-3e015a8112c2",
+      "storeSku": "FC-0010"
+    },
+    {
+      "id": "7ed4019e-29af-4d71-9044-f4392a5792ed",
+      "productId": "7f6d964f-6dd9-486d-a7d1-a10973e1c509",
+      "storeSku": "FC-0011"
+    },
+    {
+      "id": "ee8bf9a1-b2fe-4c71-b59e-cf84e03d8090",
+      "productId": "19aeba59-ceb4-45a3-94d5-6ba54ff521ad",
+      "storeSku": "FC-0013"
+    },
+    {
+      "id": "6b7efe74-421e-4cb8-97d8-19f3b750f001",
+      "productId": "297f1bd1-2e1f-4d6a-befe-01a1e51bde66",
+      "storeSku": "FC-0014"
+    },
+    {
+      "id": "ef026f07-41d7-4266-894c-ad6b64efda4b",
+      "productId": "2d3e6a4f-0b11-4b91-aea5-b97c058f30d2",
+      "storeSku": "FC-0015"
+    },
+    {
+      "id": "8477a80f-44b7-4728-8366-c69974211278",
+      "productId": "494d6eb4-5d04-4b94-8126-2c0b7793ac28",
+      "storeSku": "FC-0016"
+    },
+    {
+      "id": "98be146d-7dd8-481d-b5cf-dfced8f09117",
+      "productId": "5cf0374e-6574-4c0f-91f7-db5b724cb046",
+      "storeSku": "FC-0017"
+    },
+    {
+      "id": "ceddf3d6-8869-4711-b43c-c4ffa19bfea7",
+      "productId": "669a5655-27d2-4436-8901-66c2a7bfdd49",
+      "storeSku": "FC-0018"
+    },
+    {
+      "id": "28b9bb40-9659-45ea-968a-40071144d18b",
+      "productId": "68793069-e157-4e9d-83e1-3b8eb2608da8",
+      "storeSku": "FC-0019"
+    },
+    {
+      "id": "553fa3b7-30f6-4d7d-a43e-e39c4e4b535e",
+      "productId": "8bf1e2d3-14a4-4c73-9ad7-353eb92599d9",
+      "storeSku": "FC-0020"
+    },
+    {
+      "id": "7d819ca9-bc41-4d3a-927b-8260c836f96e",
+      "productId": "a8fbd288-1082-462a-a83b-2f7e8ab2ba4d",
+      "storeSku": "FC-0001"
+    },
+    {
+      "id": "1ec6ba7e-9354-41de-a89b-d0abfc4f7007",
+      "productId": "d594a246-cd44-4bde-8174-171aacf78fc0",
+      "storeSku": "FC-0021"
+    },
+    {
+      "id": "477bf3d4-a138-4958-87f9-53653c1bf74b",
+      "productId": "f3b13a8d-252f-4677-8a85-26d0b3e472e8",
+      "storeSku": "FC-0022"
+    },
+    {
+      "id": "f14a3f53-e3a3-444f-ba57-d7dc34cacb0e",
+      "productId": "028bcd41-c24e-443f-ad4c-e3b8c5bbc765",
+      "storeSku": "FC-0023"
+    }
+  ]
+}
