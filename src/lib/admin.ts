@@ -7,6 +7,7 @@ import { productSchema, partnerSchema, settingsSchema, id, minor } from "./valid
 import { provisionAccount } from "./accounts";
 import { analytics } from "./analytics";
 import { assertProductSlugAvailable, lockProductSlugs, retainProductSlug } from "./product-slugs";
+import { allocateStoreSkus } from "./store-skus";
 
 export const adminResources = ["overview", "products", "categories", "inventory", "orders", "customers", "partners", "cards", "commissions", "payouts", "analytics", "expenses", "reports", "settings", "disputes", "notifications", "audit", "integrations"] as const;
 export async function getAdminData(resource: string, query = new URLSearchParams()) {
@@ -39,7 +40,8 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
   if (resource === "product-bulk") {
     const v = z.object({ ids: z.array(id).min(1).max(100), status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]) }).strict().parse(raw);
     return transaction(async tx => {
-      const products = await tx.product.findMany({ where: { id: { in: v.ids }, status: { not: "DELETED" } }, select: { id: true } });
+      const products = await tx.product.findMany({ where: { id: { in: v.ids }, status: { not: "DELETED" } }, select: { id: true, rightsReviewRequired: true } });
+      if (v.status === "PUBLISHED" && products.some(p => p.rightsReviewRequired)) throw new AppError("Nişan və təsvirlər üzrə hüquq yoxlaması tamamlanmalıdır.", 409);
       const result = await tx.product.updateMany({ where: { id: { in: products.map(p => p.id) } }, data: { status: v.status } });
       for (const product of products) await audit(tx, actorId, "product.bulk-status", "Product", product.id, { status: v.status }); return result;
     });
@@ -50,7 +52,10 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
       const { variants, id: productId, ...data } = v;
       await lockProductSlugs(tx);
       await assertProductSlugAvailable(tx, data.slug, productId);
-      const previous = productId ? await tx.product.findUniqueOrThrow({ where: { id: productId, status: { not: "DELETED" } }, select: { slug: true } }) : null;
+      const previous = productId ? await tx.product.findUniqueOrThrow({ where: { id: productId, status: { not: "DELETED" } }, select: { slug: true, rightsReviewRequired: true, rightsClearance: true } }) : null;
+      const rightsPending = data.rightsReviewRequired ?? previous?.rightsReviewRequired ?? false;
+      if (rightsPending && data.status === "PUBLISHED") throw new AppError("Nişan və təsvirlər üzrə hüquq yoxlaması tamamlanmalıdır.", 409);
+      if (previous?.rightsReviewRequired && !rightsPending && (data.rightsClearance ?? "").trim().length < 10) throw new AppError("Hüquq yoxlamasının nəticəsini və sənəd istinadını yazın.", 409);
       const product = productId ? await tx.product.update({ where: { id: productId, status: { not: "DELETED" } }, data }) : await tx.product.create({ data });
       if (previous && previous.slug !== product.slug) await retainProductSlug(tx, product.id, previous.slug);
       const current = await tx.productVariant.findMany({ where: { productId: product.id } });
@@ -60,13 +65,15 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
         const existing = variantId ? current.find(x => x.id === variantId) : null;
         if (variantId && !existing) throw new AppError("Variant bu məhsula aid deyil.");
         if (existing && stock < existing.reserved) throw new AppError("Stok rezerv sayından az ola bilməz.");
-        const saved = existing ? await tx.productVariant.update({ where: { id: existing.id }, data: { ...fields, stock } }) : await tx.productVariant.create({ data: { productId: product.id, ...fields, stock } });
+        const storeSku = existing?.storeSku ?? (await allocateStoreSkus(tx))[0];
+        const stockVerified = variant.stockVerified ?? (existing && stock === existing.stock ? existing.stockVerified : false);
+        const saved = existing ? await tx.productVariant.update({ where: { id: existing.id }, data: { ...fields, stock, storeSku, stockVerified } }) : await tx.productVariant.create({ data: { productId: product.id, ...fields, stock, storeSku, stockVerified } });
         kept.push(saved.id);
         const delta = stock - (existing?.stock ?? 0);
         if (delta) await tx.inventoryMovement.create({ data: { variantId: saved.id, kind: "ADJUSTMENT", quantity: delta, reason: "Məhsul forması ilə stok yeniləndi" } });
       }
       await tx.productVariant.updateMany({ where: { productId: product.id, id: { notIn: kept } }, data: { active: false } });
-      await audit(tx, actorId, productId ? "product.update" : "product.create", "Product", product.id, { status: product.status, ...(previous && previous.slug !== product.slug ? { previousSlug: previous.slug, slug: product.slug } : {}) });
+      await audit(tx, actorId, productId ? "product.update" : "product.create", "Product", product.id, { status: product.status, rightsReviewRequired: product.rightsReviewRequired, rightsClearance: product.rightsClearance, stockVerification: variants.filter(v => v.stockVerified !== undefined).map(v => ({ variantId: v.id, verified: v.stockVerified })), ...(previous && previous.slug !== product.slug ? { previousSlug: previous.slug, slug: product.slug } : {}) });
       return product;
     });
   }
@@ -83,11 +90,11 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
     });
   }
   if (resource === "inventory") {
-    const v = z.object({ variantId: id, delta: z.number().int().min(-1000000).max(1000000).refine(n => n !== 0), reason: z.string().min(3).max(500) }).parse(raw);
+    const v = z.object({ variantId: id, delta: z.number().int().min(-1000000).max(1000000), stockVerified: z.boolean().optional(), reason: z.string().min(3).max(500) }).refine(v => v.delta !== 0 || v.stockVerified !== undefined).parse(raw);
     return transaction(async tx => { await expireReservations(tx); const variant = await tx.productVariant.findUniqueOrThrow({ where: { id: v.variantId, product: { status: { not: "DELETED" } } } });
       if (variant.stock + v.delta < variant.reserved) throw new AppError("Stok rezerv sayından az ola bilməz.");
-      const result = await tx.productVariant.update({ where: { id: v.variantId }, data: { stock: { increment: v.delta } } });
-      await tx.inventoryMovement.create({ data: { variantId: v.variantId, kind: "ADJUSTMENT", quantity: v.delta, reason: v.reason } });
+      const result = await tx.productVariant.update({ where: { id: v.variantId }, data: { stock: { increment: v.delta }, ...(v.stockVerified !== undefined ? { stockVerified: v.stockVerified } : v.delta ? { stockVerified: false } : {}) } });
+      if (v.delta) await tx.inventoryMovement.create({ data: { variantId: v.variantId, kind: "ADJUSTMENT", quantity: v.delta, reason: v.reason } });
       await audit(tx, actorId, "inventory.adjust", "Variant", variant.id, v); return result;
     });
   }

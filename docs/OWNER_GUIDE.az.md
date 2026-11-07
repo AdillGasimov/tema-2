@@ -102,3 +102,15 @@ Tərəfdaş kabinetində yalnız öz sifariş nömrələri, statuslar, komissiya
 **Analitika** toplanmış pulu, geri ödənişləri, çatdırılmış məhsulların tarixi maya dəyərini, komissiya və xərcləri göstərir. Sorğu yaradılması gəlir deyil. Tarix filtri sifarişin yaranma tarixinə görə kohort seçir; seçilmiş sifarişlərin indiyə qədərki maliyyə nəticəsi görünür. “Xərclərdən sonra töhfə” tam mühasibat xalis mənfəəti deyil. Vergi və digər uçot öhdəlikləri ayrıca nəzərə alınmalıdır.
 
 **Hesabatlar** bölməsində sifariş, məhsul/stok, xərc, ödəniş və maliyyə CSV-lərini tarix aralığı ilə endirin. QR kartları PDF formatındadır. Google Sheets istəyə bağlıdır və texniki quraşdırma tələb edir; baza həmişə əsas mənbə olaraq qalır.
+
+## Mağaza kodları, stok təsdiqi və nişanların yoxlanması
+
+**Mağaza SKU-su:** FC-0001 formatında kod hər variant üçün avtomatik və təkrarsız yaradılır. Sayt, məhsulun strukturlaşdırılmış məlumatı və yeni sifarişlər bu kodu istifadə edir. Əvvəlki TM/BM kodları admin daxilində CSV və şəkil idxalını uyğunlaşdırmaq üçün saxlanılır; yeni CSV fayllarında həmin mənbə kodunu istifadə edə bilərsiniz. Keçmiş sifarişlərin kod və qiymət sətirləri dəyişdirilmir.
+
+**Fiziki stok:** Məhsul redaktəsində və ya Anbar bölməsində sayımı etdikdən sonra **Fiziki stok sayını yoxlamışam** işarəsini seçin. Anbarda yalnız təsdiq üçün say dəyişikliyini 0 saxlayın və səbəbi yazın. Müsbət, təsdiqli və rezervdən artıq qalıq Stokda göstərilir. Müsbət, təsdiqsiz qalıq Mövcudluğu dəqiqləşdirin kimi görünür; sayları uyduraraq sıfırlamaq lazım deyil. CSV-dən gələn say özü-özlüyündə fiziki təsdiq deyil. Yeni say düzəlişi ayrıca təsdiq olmadan əvvəlki təsdiqi ləğv edir.
+
+**Nişanlar üzrə hüquq yoxlaması:** DİN gerbi, Qarabağ FK və dövlət rəmzləri təsvirli dörd məhsul hüquq sənədləri yoxlanana qədər Qaralama saxlanılır. Məhsulda **Nişanlar üzrə hüquq yoxlaması gözlənilir** işarəsi varkən yayımlamaq və kütləvi yayımlamaq mümkün deyil. Təchizat, məhsulun orijinallığı, nişandan/təsvirdən və fotoşəkildən istifadə əsasları barədə sənədləri yoxlayın. Sonra **Hüquq yoxlamasının nəticəsi və sənəd istinadı** sahəsini doldurun, işarəni götürün və yayımlayın. Bu, administratorun sənədləşdirdiyi qərardır; proqram hüquqi icazəni özü müəyyənləşdirmir.
+
+**Qaytarılma:** Sahibin istədiyi 3 təqvim günü operativ müraciət tövsiyəsidir. Məcburi qanuni hüquqların son tarixi deyil. Qanunun tətbiq olunduğu hallarda 14 günlük dəyişdirmə və elektron müqavilələr üçün 7 iş günlük imtina qaydaları ayrıca göstərilir. Rəsmi mənbələr qaytarılma səhifəsindədir.
+
+**Qiymətlərin yenilənməsi:** Səbət cihazda qalır, lakin qiymət, başlıq, mövcud hədd və satışdan çıxan məhsullar açıldıqda və brauzer yenidən fokuslandıqda serverdən yenilənir. Son sifariş yenə serverdə yoxlanılır. İnternet kəsildikdə saxlanmış səbət qalır.

@@ -3,10 +3,11 @@ import Image from "next/image";
 import { ArrowUpRight, Package } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalog";
 import { money } from "@/lib/money";
+import { availability } from "@/lib/availability";
 export function ProductCard({ product: p }: { product: PublicProduct }) {
   const v = [...p.variants].sort((a, b) => (a.discountMinor ?? a.priceMinor) - (b.discountMinor ?? b.priceMinor))[0];
   if (!v) return null;
-  const available = p.variants.some(v => v.stock > v.reserved);
+  const stock = availability(p.variants);
   return <article className="product-card">
     <Link href={`/products/${p.slug}`} className="product-visual" aria-label={p.name}>
       {p.images[0] ? <span className="product-image-frame"><Image src={`/api/media/${p.images[0].key}`} alt={p.images[0].alt || p.name} fill sizes="(max-width: 600px) 45vw, (max-width: 1000px) 30vw, 24vw" unoptimized /></span> : <div className="product-placeholder"><Package size={56} strokeWidth={1} /><span>Şəkil əlavə ediləcək</span></div>}
@@ -16,7 +17,7 @@ export function ProductCard({ product: p }: { product: PublicProduct }) {
     <div className="product-card-info">
       <span className="eyebrow">{p.category.name}</span>
       <Link href={`/products/${p.slug}`} className="product-title-link" title={p.name}><h3>{p.name}</h3></Link>
-      <div className="product-price"><span className="product-price-amounts"><strong>{money(v.discountMinor ?? v.priceMinor)}</strong>{v.discountMinor !== null && <del>{money(v.priceMinor)}</del>}</span><span className={available ? "in-stock" : "out-stock"}><i />{available ? "Stokda" : "Stokda yoxdur"}</span></div>
+      <div className="product-price"><span className="product-price-amounts"><strong>{money(v.discountMinor ?? v.priceMinor)}</strong>{v.discountMinor !== null && <del>{money(v.priceMinor)}</del>}</span><span className={stock.className}><i />{stock.label}</span></div>
     </div>
   </article>;
 }

@@ -5,6 +5,7 @@ import { db, transaction, type Tx } from "./db";
 import { AppError } from "./errors";
 import { parseProductCsv, parsePhotoCsv, type CsvIssue, type CsvProductRow } from "./product-csv";
 import { productSchema } from "./validation";
+import { allocateStoreSkus } from "./store-skus";
 import { MAX_PRODUCT_PHOTOS } from "./product-photo-policy";
 import { lockProductSlugs } from "./product-slugs";
 
@@ -106,11 +107,12 @@ export async function importProducts(csv: string, defaultCategoryId: string | un
       const plan = await planCsv(csv, defaultCategoryId, tx);
       if (plan.issues.length) throw new AppError(`İdxal saxlanılmadı. Sətir ${plan.issues[0].line}: ${plan.issues[0].message}`, 409);
       const products: Prisma.ProductCreateManyInput[] = [], variants: Prisma.ProductVariantCreateManyInput[] = [], movements: Prisma.InventoryMovementCreateManyInput[] = [], logs: Prisma.AuditLogCreateManyInput[] = [];
+      const storeSkus = await allocateStoreSkus(tx, plan.variantCount);
       for (const product of plan.products) {
         const { variants: input, ...fields } = product; const productId = randomUUID();
         products.push({ ...fields, id: productId });
         for (const variant of input) {
-          const variantId = randomUUID(); variants.push({ ...variant, id: variantId, productId });
+          const variantId = randomUUID(); variants.push({ ...variant, id: variantId, productId, storeSku: storeSkus[variants.length], stockVerified: false });
           if (variant.stock) movements.push({ variantId, kind: "ADJUSTMENT", quantity: variant.stock, reason: "CSV idxalı ilə ilkin stok" });
         }
         logs.push({ actorId, action: "product.create", entity: "Product", entityId: productId, detail: { source: "csv", status: "DRAFT", importId: idempotencyKey } });

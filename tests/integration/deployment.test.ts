@@ -55,7 +55,7 @@ describe("Vercel initialization against real fresh PostgreSQL databases", () => 
     expect(first.status, `${first.stdout}\n${first.stderr}`).toBe(0);
     const store = await client.query('SELECT "brandName", domain FROM "StoreSettings" WHERE id = $1', ["store"]);
     expect(store.rowCount).toBe(1); expect(store.rows[0].domain).toBe("https://deployment-staging.example.test");
-    expect((await client.query('SELECT count(*)::int AS count FROM "_prisma_migrations"')).rows[0].count).toBe(5);
+    expect((await client.query('SELECT count(*)::int AS count FROM "_prisma_migrations"')).rows[0].count).toBe(6);
     expect((await client.query('SELECT "legalName", "taxId", "businessAddress", "deliveryTime", "deliveryFreeRegions" FROM "StoreSettings"')).rows).toEqual([{ legalName: "", taxId: "", businessAddress: "", deliveryTime: "", deliveryFreeRegions: "" }]);
     expect((await client.query('SELECT count(*)::int AS count FROM "ProductSlugAlias"')).rows[0].count).toBe(0);
     expect((await client.query("SELECT is_nullable FROM information_schema.columns WHERE table_name = 'ProductImage' AND column_name = 'sourceUrlHash'")).rows).toEqual([{ is_nullable: "YES" }]);

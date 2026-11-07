@@ -1,8 +1,20 @@
 # Current handoff — 2026-11-07
 
-## Footer business block — removal requested
+## Catalog follow-up — testing before release
 
-Owner asked to remove the “Biznes məlumatları” section below the storefront footer. Its markup and dedicated styles are removed, existing browser expectations updated, and admin/owner guidance corrected. No database fields or business records are changed. Lint, types and the production build pass; both affected Chromium cases pass (2/2, 23.8s). The authorized main-branch deployment and live verification follow. Earlier audit and release notes below remain historical.
+Owner confirmed the sunshade must be **19.99 AZN**, requested **3 days** for returns, and asked for owned SKUs, one delivery fee statement, precise trust-row copy, honest stock labels and rights review of marked goods. Stock evidence and rights-permission documents have not been supplied. No physical count or license is assumed.
+
+Migration6 adds owned `storeSku`, explicit `stockVerified`, private rights hold/clearance and transactional FC counter. Source SKUs stay private for existing CSV/photo matching. New orders snapshot owned FC codes and historical orders retain their old values. Positive unverified quantities get neutral availability and no InStock schema; admin can attest physical counts without a fictitious stock movement. The safe public cart quote refresh updates stale prices and removes unavailable products.
+
+The guarded `2026-11-07-review.json` plan, run last on the primary target, checks this owner's branding receipt and captured variant/price/gallery/delivery state, updates only the approved sunshade price10000→1999, clears its price flag and duplicate delivery note, assigns store codes and moves four marked products to DRAFT with rights holds. Receipt/hash and serializable lock protect replays and later edits. Status/publication/checkout are guarded; clearing a rights hold needs a private documented reference. See `docs/RIGHTS_REVIEW_2026-11-07.az.md`; actual permission is pending, not granted by the program.
+
+Official full texts confirm Consumer Law art15–16 qualifying14day exchange and E-Commerce art9 qualifying7businessday withdrawal. Therefore3calendar days is a prompt-service request recommendation, explicitly not a deadline cutting statutory rights. The return page states the actual statutory numbers/conditions and links the official laws.
+
+Lint/types,116units,73integration cases and build pass. Full21browser run passed17, including newSKU/stock/cartprice/rights/returns and actual301s under the managed supplier-download proxy. Four older cases needed exact labels, a real cart fixture and a scoped alert; one depended on the first aborted fixture. All four focused cases now pass (1.2m), so all21distinct cases are verified across runs. Preflight22products/23variants has zero conflicts; remote main stilla84ba92. No production correction applied yet. Detailed checkpoint is `.local/catalog-followup/plan.md`.
+
+## Footer business block — removed and released
+
+Owner asked to remove the “Biznes məlumatları” section below the storefront footer. Its markup and dedicated styles are removed, existing browser expectations updated, and admin/owner guidance corrected. No database fields or business records are changed. Lint, types and the production build pass; both affected Chromium cases pass (2/2, 23.8s). Release `a84ba92cbce339d4fd483f36d1c1441b586f8ba2` is main; Vercel completed 2026-11-07T15:22:20Z at https://vercel.com/adillgasimov/tema-2-staging/25rT41hu1ZQEzSZ81e6XAfaeDhEb. Live home/products/privacy/cart return200 without the block; 1440/390px Chromium checks confirm the footer links and responsive layout. Evidence is in `.local/footer-removal/`. The business-info placeholder requirement in the earlier audit was superseded by this removal request; no reminder to populate the removed footer is needed. These are local post-release notes. Earlier audit and release notes below remain historical.
 
 ## Store content, URL, delivery and functional audit — released
 

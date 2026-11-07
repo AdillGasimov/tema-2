@@ -26,7 +26,7 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   await page.getByLabel("Məhsulun adı", { exact: true }).fill(name); await page.getByLabel("URL adı (slug)").fill(`e2e-${f.run}`);
   await page.locator('select[name="categoryId"]').selectOption({ index: 1 }); await page.locator('select[name="status"]').selectOption("DRAFT");
   await page.getByLabel("Məhsul təsviri").fill("E2E yoxlama məhsulu, yalnız təcrid edilmiş test bazasında.");
-  await page.getByLabel("SKU", { exact: true }).fill(`E2E-${f.run}`); await page.getByLabel("Stok sayı").fill("10");
+  await page.getByLabel("CSV / daxili kod", { exact: true }).fill(`E2E-${f.run}`); await page.getByLabel("Stok sayı", { exact: true }).fill("10");
   await page.getByLabel("Alış maya dəyəri (AZN)", { exact: true }).fill("5.00"); await page.getByLabel("Satış qiyməti (AZN)", { exact: true }).fill("15.00");
   await page.getByRole("button", { name: "Yadda saxla", exact: true }).click();
   await expect(page.getByLabel("Məhsul şəkilləri", { exact: true })).toBeVisible();
@@ -236,7 +236,11 @@ test("checkout becomes available after the owner configures the WhatsApp number"
   const headers = { Origin: "http://localhost:3100" };
   try {
     expect((await page.request.post("/api/admin/settings", { headers, data: { settings: { ...settings, whatsapp: "" }, rule: initial.rule } })).ok()).toBeTruthy();
-    await page.addInitScript(() => localStorage.setItem("store-cart-v1", JSON.stringify([{ variantId: "readiness-only", name: "Checkout readiness", variant: "Standart", priceMinor: 100, quantity: 1, slug: "readiness-only" }])));
+    const categories = await (await page.request.get("/api/admin/categories")).json();
+    const created = await page.request.post("/api/admin/products", { headers, data: { name: `Checkout readiness ${f.run}`, slug: `checkout-readiness-${f.run}`, description: "Isolated readiness fixture", categoryId: categories[0].id, status: "PUBLISHED", featured: false, variants: [{ name: "Standart", sku: `READY-${f.run}`, priceMinor: 100, costMinor: 50, stock: 5 }] } });
+    expect(created.ok()).toBe(true); const product = await created.json();
+    const products = await (await page.request.get("/api/admin/products")).json(); const variantId = products.products.find((p: { id: string }) => p.id === product.id).variants[0].id;
+    await page.addInitScript(item => localStorage.setItem("store-cart-v1", JSON.stringify([item])), { variantId, name: `Checkout readiness ${f.run}`, variant: "Standart", priceMinor: 100, quantity: 1, slug: `checkout-readiness-${f.run}` });
     await page.goto("/checkout");
     await expect(page.getByText("Sifariş qəbulu hələ aktiv deyil.", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sifariş ver", exact: true })).toBeDisabled();

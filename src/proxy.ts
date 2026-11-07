@@ -8,6 +8,8 @@ export async function proxy(request: NextRequest) {
   // separately, so importing its generated Prisma runtime here can fail before
   // any page renders even though the same queries work in application routes.
   const lookup = new URL("/api/catalog/redirect", request.url);
+  // Standalone servers bind to 0.0.0.0; use a loopback destination for local I/O.
+  if (lookup.hostname === "0.0.0.0" || lookup.hostname === "[::]") lookup.hostname = "127.0.0.1";
   lookup.searchParams.set("slug", slug);
   try {
     const response = await fetch(lookup, { cache: "no-store", signal: AbortSignal.timeout(5000) });

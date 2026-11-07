@@ -1,0 +1,163 @@
+{
+  "id": "owner-catalog-followup-2026-11-07",
+  "ownerMarker": "brand-release:owner-furycar-brand-2026-11-06",
+  "variants": [
+    {
+      "id": "7d819ca9-bc41-4d3a-927b-8260c836f96e",
+      "productId": "a8fbd288-1082-462a-a83b-2f7e8ab2ba4d",
+      "sourceSku": "TM-606963551314469"
+    },
+    {
+      "id": "e8357df2-696b-49c2-a07a-a0bdd305763a",
+      "productId": "2c730c6a-0ae5-4cee-b6db-531dd271051e",
+      "sourceSku": "BM-3024998"
+    },
+    {
+      "id": "b9a2b4a4-f52d-4039-94c7-2247d08642fe",
+      "productId": "962087c2-da51-4d2b-9e9d-2a74d2f46e47",
+      "sourceSku": "BM-1400522"
+    },
+    {
+      "id": "68c7ec4f-bfe5-417b-a6f3-f755d1736a00",
+      "productId": "c3f20e86-c319-4b94-a324-cc7b6178ebbf",
+      "sourceSku": "BM-3025040"
+    },
+    {
+      "id": "4f6c0bd4-a649-4711-a5a0-4b9108ad4317",
+      "productId": "829ac0e7-7cbf-4a47-8f0b-162b07d41c00",
+      "sourceSku": "BM-2651838"
+    },
+    {
+      "id": "cmw4yjz2h000108jmzj7jr9dx",
+      "productId": "829ac0e7-7cbf-4a47-8f0b-162b07d41c00",
+      "sourceSku": "BM-265183"
+    },
+    {
+      "id": "4958f8a5-4978-4a63-aefd-84eac99d0dc2",
+      "productId": "306ae8f5-4c71-44b4-96de-e2c0792bab50",
+      "sourceSku": "BM-1244713"
+    },
+    {
+      "id": "8c8f8c5a-3864-4d33-8aae-a7ec54fe825a",
+      "productId": "34d8826c-17f2-4691-ab95-d6d81e371ca3",
+      "sourceSku": "BM-2378677"
+    },
+    {
+      "id": "d706a9b8-9782-4bde-b733-cacc7c333859",
+      "productId": "63a2f05b-a6d2-48b0-b9d2-1746fe9b68ee",
+      "sourceSku": "BM-1568889"
+    },
+    {
+      "id": "adfe0980-f9b2-40f6-a848-49dcb3ce60d5",
+      "productId": "6505862f-08e5-4487-b301-3e015a8112c2",
+      "sourceSku": "BM-1091287"
+    },
+    {
+      "id": "7ed4019e-29af-4d71-9044-f4392a5792ed",
+      "productId": "7f6d964f-6dd9-486d-a7d1-a10973e1c509",
+      "sourceSku": "BM-1091286"
+    },
+    {
+      "id": "eafb8287-a80c-43af-8398-e53ee51e9572",
+      "productId": "9e3ebff6-fcee-4c5e-ae82-574ee385524c",
+      "sourceSku": "BM-1639569"
+    },
+    {
+      "id": "ee8bf9a1-b2fe-4c71-b59e-cf84e03d8090",
+      "productId": "19aeba59-ceb4-45a3-94d5-6ba54ff521ad",
+      "sourceSku": "TM-601103605083541"
+    },
+    {
+      "id": "6b7efe74-421e-4cb8-97d8-19f3b750f001",
+      "productId": "297f1bd1-2e1f-4d6a-befe-01a1e51bde66",
+      "sourceSku": "TM-606084727173617"
+    },
+    {
+      "id": "ef026f07-41d7-4266-894c-ad6b64efda4b",
+      "productId": "2d3e6a4f-0b11-4b91-aea5-b97c058f30d2",
+      "sourceSku": "BM-1641373"
+    },
+    {
+      "id": "8477a80f-44b7-4728-8366-c69974211278",
+      "productId": "494d6eb4-5d04-4b94-8126-2c0b7793ac28",
+      "sourceSku": "TM-605997619857011"
+    },
+    {
+      "id": "98be146d-7dd8-481d-b5cf-dfced8f09117",
+      "productId": "5cf0374e-6574-4c0f-91f7-db5b724cb046",
+      "sourceSku": "TM-601099685326911"
+    },
+    {
+      "id": "ceddf3d6-8869-4711-b43c-c4ffa19bfea7",
+      "productId": "669a5655-27d2-4436-8901-66c2a7bfdd49",
+      "sourceSku": "TM-607267957140933"
+    },
+    {
+      "id": "28b9bb40-9659-45ea-968a-40071144d18b",
+      "productId": "68793069-e157-4e9d-83e1-3b8eb2608da8",
+      "sourceSku": "TM-601100210993429"
+    },
+    {
+      "id": "553fa3b7-30f6-4d7d-a43e-e39c4e4b535e",
+      "productId": "8bf1e2d3-14a4-4c73-9ad7-353eb92599d9",
+      "sourceSku": "TM-605507574146174"
+    },
+    {
+      "id": "1ec6ba7e-9354-41de-a89b-d0abfc4f7007",
+      "productId": "d594a246-cd44-4bde-8174-171aacf78fc0",
+      "sourceSku": "TM-601100968350523"
+    },
+    {
+      "id": "477bf3d4-a138-4958-87f9-53653c1bf74b",
+      "productId": "f3b13a8d-252f-4677-8a85-26d0b3e472e8",
+      "sourceSku": "BM-2147013"
+    },
+    {
+      "id": "f14a3f53-e3a3-444f-ba57-d7dc34cacb0e",
+      "productId": "028bcd41-c24e-443f-ad4c-e3b8c5bbc765",
+      "sourceSku": "TM-607429689476597"
+    }
+  ],
+  "price": {
+    "productId": "8bf1e2d3-14a4-4c73-9ad7-353eb92599d9",
+    "variantId": "553fa3b7-30f6-4d7d-a43e-e39c4e4b535e",
+    "expectedMinor": 10000,
+    "minor": 1999
+  },
+  "delivery": {
+    "expectedInfo": "28 May (Bakı) üçün çatdırılma pulsuzdur. Digər ünvanlara çatdırılma haqqı 5 ₼-dir. Ünvan, vaxt və haqq WhatsApp vasitəsilə təsdiqlənir.",
+    "info": ""
+  },
+  "rights": [
+    {
+      "id": "2c730c6a-0ae5-4cee-b6db-531dd271051e",
+      "slug": "bayraq-gerb-etirlendirici",
+      "imageKeys": [
+        "images/51ef70b9-60ab-4e91-bcb5-f043ac75620c.webp",
+        "images/6b3a77c4-9308-4d6a-b143-895faa28bf42.webp"
+      ]
+    },
+    {
+      "id": "c3f20e86-c319-4b94-a324-cc7b6178ebbf",
+      "slug": "din-gerbli-etirlendirici",
+      "imageKeys": [
+        "images/c9bdcd00-15f6-4f02-8b10-3461ee2f0b47.webp",
+        "images/3d97ae81-82f7-4ce8-9083-9af7b8dc0465.webp"
+      ]
+    },
+    {
+      "id": "34d8826c-17f2-4691-ab95-d6d81e371ca3",
+      "slug": "bayraqli-gunes-enerjili-etirlendirici",
+      "imageKeys": [
+        "images/aa94492a-fba4-4052-ae12-2bc397b88547.webp"
+      ]
+    },
+    {
+      "id": "9e3ebff6-fcee-4c5e-ae82-574ee385524c",
+      "slug": "qarabag-fk-etirlendirici",
+      "imageKeys": [
+        "images/f1c40bdd-f97e-4cdd-a9c8-4137663a9951.webp"
+      ]
+    }
+  ]
+}

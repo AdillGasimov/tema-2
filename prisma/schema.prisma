@@ -98,6 +98,8 @@ model Product {
   description    String
   shortDescription String          @default("")
   needsPriceReview Boolean         @default(false)
+  rightsReviewRequired Boolean     @default(false)
+  rightsClearance String           @default("")
   categoryId     String
   category       ProductCategory  @relation(fields: [categoryId], references: [id])
   status         String           @default("DRAFT")
@@ -128,16 +130,23 @@ model ProductVariant {
   product         Product             @relation(fields: [productId], references: [id])
   name            String              @default("Standart")
   sku             String              @unique
+  storeSku        String?             @unique
   costMinor       Int
   priceMinor      Int
   discountMinor   Int?
   commissionMinor Int?
   stock           Int                 @default(0)
+  stockVerified   Boolean             @default(false)
   reserved        Int                 @default(0)
   lowStock        Int                 @default(5)
   active          Boolean             @default(true)
   movements       InventoryMovement[]
   orderItems      OrderItem[]
+}
+
+model StoreSkuCounter {
+  id    String @id
+  value Int    @default(0)
 }
 
 model ProductImage {

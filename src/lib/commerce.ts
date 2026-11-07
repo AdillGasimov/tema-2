@@ -53,12 +53,12 @@ export async function createOrder(raw: unknown, cookieCode?: string | null) {
     let subtotalMinor = 0;
     for (const [variantId, quantity] of quantities) {
       const v = await tx.productVariant.findUnique({ where: { id: variantId }, include: { product: { include: { category: true } } } });
-      if (!v || !v.active || v.product.status !== "PUBLISHED") throw new AppError("Məhsul artıq satışda deyil.");
+      if (!v || !v.active || v.product.status !== "PUBLISHED" || v.product.rightsReviewRequired) throw new AppError("Məhsul artıq satışda deyil.");
       if (quantity > 100 || v.stock - v.reserved < quantity) throw new AppError(`${v.product.name}: kifayət qədər stok yoxdur.`, 409);
       const unitPriceMinor = v.discountMinor ?? v.priceMinor;
       subtotalMinor += unitPriceMinor * quantity;
       if (v.commissionMinor !== null) productCommissions.push(v.commissionMinor);
-      items.push({ variant: { connect: { id: variantId } }, productName: v.product.name, variantName: v.name, sku: v.sku, categoryName: v.product.category.name,
+      items.push({ variant: { connect: { id: variantId } }, productName: v.product.name, variantName: v.name, sku: v.storeSku ?? v.sku, categoryName: v.product.category.name,
         quantity, unitPriceMinor, unitCostMinor: v.costMinor });
       await tx.productVariant.update({ where: { id: variantId }, data: { reserved: { increment: quantity } } });
     }

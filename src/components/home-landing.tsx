@@ -38,7 +38,7 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
       <div className="landing-photo-caption"><Sparkles size={19} strokeWidth={1.5} /><span>Gündəlik qayğı.<strong>Hiss olunan fərq.</strong></span></div>
     </section>
 
-    <TrustRow />
+    <TrustRow settings={s} />
 
     {s.showCategories && categories.length > 0 && <section className="container home-section" id="collection" aria-labelledby="categories-title">
       <div className="home-section-heading"><div><p className="eyebrow">KATEQORİYALAR</p><h2 id="categories-title">Axtardığınız, bir yerdə.</h2></div><Link href="/products" className="text-link">Bütün məhsullar <ArrowUpRight size={18} /></Link></div>

@@ -14,11 +14,11 @@ async function signIn(page: Page, identifier: string, password: string) {
   }
   throw new Error("Test login remained rate limited.");
 }
-type ProductInput = { id: string; name: string; slug: string; description: string; shortDescription: string; categoryId: string; featured: boolean; variants: { id: string; name: string; sku: string; costMinor: number; priceMinor: number; stock: number; discountMinor: number | null; commissionMinor: number | null; active: boolean; lowStock: number }[] };
+type ProductInput = { id: string; name: string; slug: string; description: string; shortDescription: string; categoryId: string; featured: boolean; variants: { id: string; name: string; sku: string; storeSku: string | null; stockVerified: boolean; costMinor: number; priceMinor: number; stock: number; discountMinor: number | null; commissionMinor: number | null; active: boolean; lowStock: number }[] };
 const update = (p: ProductInput, slug = p.slug) => ({ id: p.id, name: p.name, slug, description: p.description, shortDescription: p.shortDescription, categoryId: p.categoryId, status: "PUBLISHED", featured: p.featured,
-  variants: p.variants.map(v => ({ id: v.id, name: v.name, sku: v.sku, costMinor: v.costMinor, priceMinor: v.priceMinor, stock: v.stock, discountMinor: v.discountMinor, commissionMinor: v.commissionMinor, active: v.active, lowStock: v.lowStock })) });
+  variants: p.variants.map(v => ({ id: v.id, name: v.name, sku: v.sku, costMinor: v.costMinor, priceMinor: v.priceMinor, stock: v.stock, stockVerified: v.stockVerified, discountMinor: v.discountMinor, commissionMinor: v.commissionMinor, active: v.active, lowStock: v.lowStock })) });
 let admin: Page, initial: { settings: Record<string, unknown>; rule: unknown };
-let single: ProductInput, multi: ProductInput, sold: ProductInput, redirectProduct: ProductInput;
+let single: ProductInput, multi: ProductInput, sold: ProductInput, redirectProduct: ProductInput, unverified: ProductInput;
 let category: { id: string; slug: string }, filterCategory: { id: string; slug: string };
 let secondImage: string;
 const suffix = randomUUID().slice(0, 7), filterNames: string[] = [];
@@ -27,18 +27,21 @@ test.beforeAll(async ({ browser }) => {
   admin = await browser.newPage(); const f = fixture(); await signIn(admin, f.email, f.password);
   initial = await (await admin.request.get("/api/admin/settings")).json();
   const delivery = JSON.parse(readFileSync("catalog/curation/2026-11-07-content.json", "utf8")).delivery.after;
-  expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(initial.settings), ...delivery, heroImageKey: null, legalName: "", taxId: "", businessAddress: "" }, rule: initial.rule } })).ok()).toBe(true);
+  expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(initial.settings), ...delivery, deliveryInfo: "", heroImageKey: null, legalName: "", taxId: "", businessAddress: "" }, rule: initial.rule } })).ok()).toBe(true);
   const categories = await (await admin.request.get("/api/admin/categories")).json();
   category = categories.find((c: { name: string }) => c.name === "Ətirləndiricilər");
   if (!category) category = await (await admin.request.post("/api/admin/categories", { headers: origin, data: { name: "Ətirləndiricilər", slug: `audit-etir-${suffix}` } })).json();
   filterCategory = await (await admin.request.post("/api/admin/categories", { headers: origin, data: { name: `Sınaq çeşidi ${suffix}`, slug: `audit-filter-${suffix}` } })).json();
   async function create(label: string, stock: number, prices = [1250], cat = category.id) {
     const response = await admin.request.post("/api/admin/products", { headers: origin, data: { name: `Sınaq məhsulu ${label} ${suffix}`, slug: `audit-${label}-${suffix}`, description: "Azərbaycan dilində ətraflı məhsul məlumatı.", shortDescription: "Azərbaycan dilində qısa məhsul təsviri.", categoryId: cat, status: "PUBLISHED", featured: false,
-      variants: prices.map((price, n) => ({ name: n ? "Böyük" : "Standart", sku: `AUD-${suffix}-${label}-${n}`, costMinor: 100, priceMinor: price, stock })) } });
+      variants: prices.map((price, n) => ({ name: n ? "Böyük" : "Standart", sku: `AUD-${suffix}-${label}-${n}`, costMinor: 100, priceMinor: price, stock, stockVerified: true })) } });
     expect(response.ok()).toBe(true); const result = await response.json();
     const all = await (await admin.request.get("/api/admin/products")).json(); return all.products.find((p: { id: string }) => p.id === result.id) as ProductInput;
   }
   single = await create("single", 2); multi = await create("multi", 3, [1000, 2000]); sold = await create("sold", 0); redirectProduct = await create("redirect", 3);
+  unverified = await create("unverified", 4, [10000]);
+  expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...update(unverified), variants: update(unverified).variants.map(v => ({ ...v, stockVerified: false })) } })).ok()).toBe(true);
+  unverified.variants[0].stockVerified = false;
   for (const color of ["green", "blue"]) {
     const upload = await admin.request.post("/api/admin/upload", { headers: origin, multipart: { file: { name: "test.png", mimeType: "image/png", buffer: await sharp({ create: { width: 30, height: 30, channels: 3, background: color } }).png().toBuffer() } } });
     expect(upload.ok()).toBe(true); const photo = await upload.json(); secondImage = photo.key;
@@ -63,6 +66,9 @@ test("public policies, delivery, footer, category navigation and SEO are complet
   }
   await page.goto("/"); await expect(page.getByRole("navigation", { name: "Əsas menyu" }).getByRole("link", { name: "Ətirləndiricilər", exact: true })).toHaveCount(1);
   await expect(page.locator("#delivery")).toContainText("3 iş günü"); await expect(page.locator("#delivery")).toContainText("4 iş günü"); await expect(page.locator("#delivery")).toContainText("pulsuz"); await expect(page.locator("#delivery")).toContainText("5,00"); await expect(page.locator("#delivery")).toContainText("WhatsApp");
+  await expect(page.locator(".trust-row")).toContainText("28 May (Bakı) üçün pulsuz çatdırılma");
+  await expect(page.locator(".trust-row")).not.toContainText("Şərtlər sifariş zamanı dəqiqləşdirilir");
+  await expect(page.locator("#delivery .delivery-extra")).toHaveCount(0);
   await page.locator('.store-footer a[href="/#delivery"]').click(); await expect(page).toHaveURL(/\/#delivery$/); await expect(page.locator("#delivery")).toBeInViewport();
   for (const path of ["/privacy", "/terms", "/returns"]) { const link = page.locator(`.store-footer a[href="${path}"]`); await expect(link).toBeVisible(); expect((await page.request.get(path)).status()).toBe(200); }
   await expect(page.locator(".footer-business, #business-info")).toHaveCount(0);
@@ -115,7 +121,7 @@ test("filters, all sort orders, invalid ranges and pagination work together", as
   const first = await page.locator('.catalog-page .product-title-link').allTextContents(); await page.getByRole("link", { name: "Növbəti", exact: true }).click(); await expect(page).toHaveURL(/page=2/); await expect(page.locator('.catalog-page .product-card')).toHaveCount(2); const second = await page.locator('.catalog-page .product-title-link').allTextContents(); expect(new Set([...first, ...second]).size).toBe(14); await page.getByRole("link", { name: "Əvvəlki", exact: true }).click();
   for (const sort of ["price-asc", "price-desc", "name", "newest"]) { await page.getByLabel("Sıralama", { exact: true }).selectOption(sort); await page.getByRole("button", { name: "Tətbiq et", exact: true }).click(); await expect(page).toHaveURL(new RegExp(`sort=${sort}`)); await expect(page.locator('.catalog-page .product-card')).toHaveCount(12); }
   await page.getByLabel("Minimum qiymət AZN").fill("8"); await page.getByLabel("Maksimum qiymət AZN").fill("10"); await page.getByRole("button", { name: "Tətbiq et", exact: true }).click(); await expect(page.locator('.catalog-page .product-card')).toHaveCount(1); await expect(page.locator('.catalog-page .product-price')).toContainText("9,00");
-  await page.getByLabel("Minimum qiymət AZN").fill("20"); await page.getByLabel("Maksimum qiymət AZN").fill("1"); await page.getByRole("button", { name: "Tətbiq et", exact: true }).click(); await expect(page.getByRole("alert")).toContainText("Maksimum qiymət"); await page.getByRole("link", { name: "Filtrləri təmizlə", exact: true }).click();
+  await page.getByLabel("Minimum qiymət AZN").fill("20"); await page.getByLabel("Maksimum qiymət AZN").fill("1"); await page.getByRole("button", { name: "Tətbiq et", exact: true }).click(); await expect(page.locator('.catalog-page [role="alert"]')).toContainText("Maksimum qiymət"); await page.getByRole("link", { name: "Filtrləri təmizlə", exact: true }).click();
   await page.getByLabel("Axtarış", { exact: true }).fill(`Tapılmayan-${suffix}`); await page.getByRole("button", { name: "Tətbiq et", exact: true }).click(); await expect(page.getByRole("heading", { name: "Məhsul tapılmadı.", exact: true })).toBeVisible();
 });
 
@@ -129,4 +135,31 @@ test("short description, price-review flag and business details can be edited; p
   const saved = admin.waitForResponse(r => r.url().endsWith("/api/admin/settings") && r.request().method() === "POST"); await admin.getByRole("button", { name: "Bütün tənzimləmələri saxla", exact: true }).click(); expect((await saved).ok()).toBe(true);
   await page.goto("/privacy"); await expect(page.locator('.footer-business, #business-info')).toHaveCount(0); await expect(page.locator('.policy-contact')).toContainText("Sınaq şirkəti");
   await page.goto("/"); await page.getByRole("link", { name: "Tərəfdaş girişi", exact: true }).click(); await expect(page).toHaveURL(/\/login$/); await signIn(page, fixture().foreignCode, fixture().password); await expect(page).toHaveURL(/\/partner$/); await expect(page.locator('.dashboard-sidebar')).toBeVisible();
+});
+
+test("owned SKUs, unverified stock, refreshed cart prices and reviewed publication work", async ({ page }) => {
+  await page.goto(`/products/${unverified.slug}`);
+  await expect(page.locator('.purchase .stock-check')).toContainText("Mövcudluğu dəqiqləşdirin");
+  await expect(page.locator('.purchase .stock-check')).toContainText(unverified.variants[0].storeSku!);
+  expect(await page.locator('.purchase').innerText()).not.toContain(unverified.variants[0].sku);
+  const jsonld = JSON.parse(await page.locator('script[type="application/ld+json"]').innerText());
+  expect(jsonld.offers[0].sku).toMatch(/^FC-\d{4,}$/); expect(jsonld.offers[0]).not.toHaveProperty("availability");
+  const publicCatalog = await (await page.request.get(`/api/catalog?q=${encodeURIComponent(unverified.name)}`)).json();
+  expect(publicCatalog.products[0].variants[0]).not.toHaveProperty("sku");
+  await page.getByRole("button", { name: "Səbətə əlavə et", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Səbətə əlavə edildi", exact: true })).toBeVisible();
+  const changed = { ...update(unverified), variants: update(unverified).variants.map(v => ({ ...v, priceMinor: 1999 })) };
+  expect((await admin.request.post("/api/admin/products", { headers: origin, data: changed })).ok()).toBe(true);
+  await page.goto("/cart"); await expect(page.locator('.cart-item strong').first()).toContainText("19,99");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("store-cart-v1")!)[0].priceMinor)).toBe(1999);
+  expect((await admin.request.post("/api/admin/inventory", { headers: origin, data: { variantId: unverified.variants[0].id, delta: 0, stockVerified: true, reason: "Test mühitində fiziki stok təsdiqi" } })).ok()).toBe(true);
+  await page.goto(`/products/${unverified.slug}`); await expect(page.locator('.purchase .in-stock')).toContainText("Stokda");
+  expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...changed, status: "DRAFT", rightsReviewRequired: true } })).ok()).toBe(true);
+  expect((await page.request.get(`/products/${unverified.slug}`)).status()).toBe(404);
+  expect((await admin.request.post("/api/admin/product-bulk", { headers: origin, data: { ids: [unverified.id], status: "PUBLISHED" } })).status()).toBe(409);
+  expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...changed, rightsReviewRequired: false, rightsClearance: "" } })).status()).toBe(409);
+  await page.goto("/cart"); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
+  expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...changed, rightsReviewRequired: false, rightsClearance: "Yalnız test nümunəsi üçün sənəd istinadı 123" } })).ok()).toBe(true);
+  expect((await page.request.get(`/products/${unverified.slug}`)).status()).toBe(200);
+  await page.goto("/returns"); await expect(page.locator("main")).toContainText("3 təqvim günü"); await expect(page.locator("main")).toContainText("alış günü sayılmadan 14 gün"); await expect(page.locator("main")).toContainText("7 iş günü");
 });

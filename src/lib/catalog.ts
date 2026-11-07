@@ -6,7 +6,7 @@ export const publicProductSelect = {
   id: true, name: true, slug: true, description: true, shortDescription: true, featured: true, seoTitle: true, seoDescription: true,
   category: { select: { id: true, name: true, slug: true } },
   images: { select: { id: true, key: true, alt: true, position: true }, orderBy: { position: "asc" as const } },
-  variants: { where: { active: true }, select: { id: true, name: true, sku: true, priceMinor: true, discountMinor: true, stock: true, reserved: true } },
+  variants: { where: { active: true }, select: { id: true, name: true, storeSku: true, priceMinor: true, discountMinor: true, stock: true, stockVerified: true, reserved: true } },
 } satisfies Prisma.ProductSelect;
 export type PublicProduct = Prisma.ProductGetPayload<{ select: typeof publicProductSelect }>;
 export async function catalog(query: URLSearchParams) {
