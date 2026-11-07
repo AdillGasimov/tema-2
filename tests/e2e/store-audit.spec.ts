@@ -107,6 +107,58 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
   await popup.close(); await page.goto("/cart"); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
 });
 
+test("checkout contact errors block invalid submissions, normalize phone entry and display server failures", async ({ page }) => {
+  let attempts = 0; const popups: Page[] = [];
+  page.on("request", request => { if (request.url().endsWith("/api/orders") && request.method() === "POST") attempts++; });
+  page.on("popup", popup => popups.push(popup));
+  await page.goto(`/products/${single.slug}`); await page.getByRole("button", { name: "İndi sifariş et", exact: true }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  const phone = page.getByLabel("Telefon nömrəsi", { exact: true });
+  await page.getByRole("button", { name: "Sifariş ver", exact: true }).click();
+  for (const name of ["name", "phone", "address", "consent"]) await expect(page.locator(`#checkout-${name}-error`)).toBeVisible();
+  await expect(page.getByLabel("Ad və soyad", { exact: true })).toBeFocused(); expect(attempts).toBe(0); expect(popups).toHaveLength(0);
+  await page.getByLabel("Ad və soyad", { exact: true }).fill("Sınaq alıcısı");
+  await phone.fill("50abc#123"); await expect(phone).toHaveValue(""); await expect(page.locator("#checkout-phone-error")).toContainText("rəqəm");
+  await phone.pressSequentially("50ab#@12"); await expect(phone).toHaveValue("5012");
+  await phone.fill("50123"); await page.getByLabel("Çatdırılma ünvanı", { exact: true }).click();
+  await expect(phone).toHaveAttribute("aria-invalid", "true"); await expect(page.locator("#checkout-phone-error")).toContainText("9 rəqəm");
+  await phone.evaluate(input => {
+    const data = new DataTransfer(); data.setData("text/plain", "+994 (50) 123-45-67");
+    input.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(phone).toHaveValue("501234567"); await expect(phone).toHaveAttribute("aria-invalid", "false");
+  await page.getByLabel("Çatdırılma ünvanı", { exact: true }).fill("Sınaq ünvanı 12");
+  await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("");
+  await page.getByRole("button", { name: "Sifariş ver", exact: true }).click();
+  await expect(page.locator("#checkout-city-error")).toBeVisible(); await expect(page.locator("#checkout-consent-error")).toBeVisible();
+  expect(attempts).toBe(0); expect(popups).toHaveLength(0);
+  await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("28 May (Bakı)");
+  await page.locator('input[name="consent"]').check();
+  const rejected = await page.request.post("/api/orders", { headers: origin, data: { idempotencyKey: randomUUID(), name: "Sınaq alıcısı", phone: "+99450abc4567", city: "28 May (Bakı)", address: "Sınaq ünvanı 12", items: [{ variantId: single.variants[0].id, quantity: 1 }] } });
+  expect(rejected.status()).toBe(400); expect((await rejected.json()).fields.fieldErrors.phone[0]).toContain("9 rəqəm");
+  await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) { if (key === "checkout-attempt") throw new DOMException("Blocked", "SecurityError"); setItem.call(this, key, value); };
+  });
+  let failures = 0; const retryKeys: string[] = [];
+  await page.route("**/api/orders", route => {
+    failures++;
+    expect(route.request().postDataJSON().phone).toBe(failures === 1 ? "+994501234567" : "+994501234568");
+    retryKeys.push(route.request().postDataJSON().idempotencyKey);
+    return failures === 1 ? route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Məlumatları yoxlayın.", fields: { fieldErrors: { phone: ["Telefon nömrəsini yenidən yoxlayın."] } } }) }) : route.fulfill({ status: 502, contentType: "text/plain", body: "Upstream unavailable" });
+  });
+  await page.getByRole("button", { name: "Sifariş ver", exact: true }).click();
+  await expect(page.locator("#checkout-phone-error")).toHaveText("Telefon nömrəsini yenidən yoxlayın.");
+  await expect.poll(() => popups.length).toBe(1); await expect.poll(() => popups[0].isClosed()).toBe(true);
+  await phone.fill("501234568"); await page.getByRole("button", { name: "Sifariş ver", exact: true }).click();
+  await expect(page.locator('.summary-card .error-message[role="alert"]')).toHaveText("Sifariş alınmadı. Yenidən cəhd edin.");
+  await expect.poll(() => popups.length).toBe(2); await expect.poll(() => popups[1].isClosed()).toBe(true);
+  await expect(page.getByRole("button", { name: "Sifariş ver", exact: true })).toBeEnabled(); expect(attempts).toBe(2);
+  await page.getByRole("button", { name: "Sifariş ver", exact: true }).click();
+  await expect.poll(() => attempts).toBe(3); await expect.poll(() => popups.length).toBe(3); await expect.poll(() => popups[2].isClosed()).toBe(true);
+  expect(retryKeys[1]).toBe(retryKeys[2]);
+});
+
 test("old URLs return 301 directly to the current product and reserve their namespace", async ({ page }) => {
   const second = `${redirectProduct.slug}-qisa`, third = `${redirectProduct.slug}-son`;
   expect((await page.request.get(`/api/catalog/redirect?slug=${redirectProduct.slug}`)).ok()).toBe(true);

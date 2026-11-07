@@ -1,5 +1,6 @@
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { checkoutSchema } from "../../src/lib/validation";
 import { db } from "../../src/lib/db";
 import { adminMutation } from "../../src/lib/admin";
 import { createOrder, updateOrder, approveCommission, createPayout } from "../../src/lib/commerce";
@@ -30,6 +31,12 @@ async function complete(orderId: string) {
   await updateOrder({ action: "status", orderId, status: "COMPLETED" }, actor);
 }
 describe("real PostgreSQL business lifecycle", () => {
+  it("rejects malformed checkout phones before creating customers, orders or stock reservations", async () => {
+    const counts = async () => ({ customers: await db.customer.count(), orders: await db.order.count(), movements: await db.inventoryMovement.count(), variant: await db.productVariant.findUniqueOrThrow({ where: { id: variantId }, select: { stock: true, reserved: true } }) });
+    const before = await counts();
+    for (const phone of ["+99450abc4567", "+994501234567#", "+491234567890", "50123"]) await expect(createOrder(checkout({ phone }))).rejects.toThrow();
+    expect(await counts()).toEqual(before);
+  });
   it("publishes products without leaking costs; validates minor-unit price filters", async () => {
     const data = await catalog(new URLSearchParams({ q: suffix, min: "14.99", max: "15.01" }));
     expect(data.total).toBe(1); expect(JSON.stringify(data)).not.toContain("costMinor"); expect(JSON.stringify(data)).not.toContain("commissionMinor");
@@ -50,6 +57,18 @@ describe("real PostgreSQL business lifecycle", () => {
     await expect(createOrder({ ...input, address: "A different address" })).rejects.toThrow();
     await updateOrder({ action: "status", orderId: a.id, status: "CANCELED" }, actor);
     expect((await db.productVariant.findUniqueOrThrow({ where: { id: variantId } })).reserved).toBe(0);
+  });
+  it("retries legacy local-format phone orders without changing history or reserving stock again", async () => {
+    const input = checkout({ phone: "0501234567" }); const order = await createOrder(input);
+    const legacy = { ...checkoutSchema.parse(input), phone: "0501234567" };
+    await db.order.update({ where: { id: order.id }, data: { phone: legacy.phone, requestHash: createHash("sha256").update(JSON.stringify(legacy)).digest("hex") } });
+    const reserved = await db.productVariant.findUniqueOrThrow({ where: { id: variantId }, select: { stock: true, reserved: true } });
+    const history = await db.order.findUniqueOrThrow({ where: { id: order.id }, include: { items: true, history: true } });
+    expect((await createOrder({ ...input, phone: "+994501234567" })).id).toBe(order.id);
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id }, include: { items: true, history: true } })).toEqual(history);
+    expect(await db.productVariant.findUniqueOrThrow({ where: { id: variantId }, select: { stock: true, reserved: true } })).toEqual(reserved);
+    await expect(createOrder({ ...input, address: "Changed address" })).rejects.toThrow("sorğu açarı");
+    await updateOrder({ action: "status", orderId: order.id, status: "CANCELED" }, actor);
   });
   it("rejects invalid and suspended partner codes and honors manual referral over cookie", async () => {
     await expect(createOrder(checkout({ referralCode: "INVALID999" }))).rejects.toThrow();

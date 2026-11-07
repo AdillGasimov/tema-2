@@ -1,11 +1,18 @@
 import { z } from "zod";
+import { checkoutContactMessages, normalizeCheckoutPhone } from "./checkout-contact";
 export const id = z.string().min(1).max(100);
 export const minor = z.number().int().min(0).max(100_000_000);
 export const codeSchema = z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/, "Kod 3–24 hərf və ya rəqəm olmalıdır.");
 export const phoneSchema = z.string().trim().transform(v => v.replace(/[\s()-]/g, "")).pipe(z.string().regex(/^\+?[0-9]{9,15}$/, "Düzgün telefon nömrəsi daxil edin."));
+export const checkoutPhoneSchema = z.string().max(40, checkoutContactMessages.phone).transform((value, ctx) => {
+  const phone = normalizeCheckoutPhone(value);
+  if (phone) return phone;
+  ctx.addIssue({ code: "custom", message: checkoutContactMessages.phone });
+  return z.NEVER;
+});
 export const checkoutSchema = z.object({
-  idempotencyKey: z.uuid(), name: z.string().trim().min(2).max(100), phone: phoneSchema,
-  city: z.string().trim().min(2).max(100), address: z.string().trim().min(5).max(500), notes: z.string().max(1000).default(""),
+  idempotencyKey: z.uuid(), name: z.string().trim().min(2, checkoutContactMessages.name).max(100, checkoutContactMessages.name), phone: checkoutPhoneSchema,
+  city: z.string().trim().min(2, checkoutContactMessages.city).max(100, checkoutContactMessages.city), address: z.string().trim().min(5, checkoutContactMessages.address).max(500, checkoutContactMessages.address), notes: z.string().max(1000).default(""),
   referralCode: z.string().trim().max(24).optional(),
   items: z.array(z.object({ variantId: id, quantity: z.number().int().min(1).max(100) })).min(1).max(50),
 }).strict();

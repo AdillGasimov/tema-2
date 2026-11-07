@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, transaction, type Tx } from "./db";
 import { AppError } from "./errors";
 import { checkoutSchema, codeSchema, id, minor } from "./validation";
+import { normalizeCheckoutPhone } from "./checkout-contact";
 import { deliveryCharge } from "./delivery";
 import { paymentState } from "./money";
 import { transitions, canConfirmDelivery } from "./order-status";
@@ -28,13 +29,19 @@ export async function expireReservations(tx: Tx) {
     await tx.order.update({ where: { id: order.id }, data: { inventoryState: "RELEASED" } });
   }
 }
+function sameCheckoutRequest(existing: { requestHash: string; phone: string }, input: z.infer<typeof checkoutSchema>, requestHash: string) {
+  if (existing.requestHash === requestHash) return true;
+  // A rolling deployment may retry a legacy local-format phone. Match the
+  // original complete payload without rewriting its phone or financial history.
+  return normalizeCheckoutPhone(existing.phone) === input.phone && existing.requestHash === createHash("sha256").update(JSON.stringify({ ...input, phone: existing.phone })).digest("hex");
+}
 export async function createOrder(raw: unknown, cookieCode?: string | null) {
   const input = checkoutSchema.parse(raw);
   const requestHash = createHash("sha256").update(JSON.stringify(input)).digest("hex");
   const execute = () => transaction(async tx => {
     const existing = await tx.order.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: { items: true } });
     if (existing) {
-      if (existing.requestHash !== requestHash) throw new AppError("Bu sorğu açarı başqa sifariş üçün istifadə edilib.", 409);
+      if (!sameCheckoutRequest(existing, input, requestHash)) throw new AppError("Bu sorğu açarı başqa sifariş üçün istifadə edilib.", 409);
       return existing;
     }
     const settings = await tx.storeSettings.findUniqueOrThrow({ where: { id: "store" } });
@@ -87,7 +94,7 @@ export async function createOrder(raw: unknown, cookieCode?: string | null) {
   catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const existing = await db.order.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: { items: true } });
-      if (existing && existing.requestHash === requestHash) return existing;
+      if (existing && sameCheckoutRequest(existing, input, requestHash)) return existing;
     }
     throw error;
   }

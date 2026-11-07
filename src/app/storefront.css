@@ -134,6 +134,12 @@
 .storefront .field { font-size: 14px; }
 .storefront .field input, .storefront .field select, .storefront .field textarea { font-size: 15px; min-height: 46px; }
 .storefront .field > small, .storefront .form-hint { font-size: 12px; color: #6b7c5f; }
+.storefront .checkout-phone-control { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.storefront .checkout-phone-control > span { padding: 0 14px; border-right: 1px solid var(--line); font-size: 15px; white-space: nowrap; }
+.storefront .field .checkout-phone-control input { border: 0; border-radius: 0 6px 6px 0; min-width: 0; flex: 1; background: transparent; box-shadow: none; }
+.storefront .checkout-phone-control:focus-within { outline: 2px solid var(--brand); outline-offset: 1px; }
+.storefront .field input[aria-invalid="true"], .storefront .field select[aria-invalid="true"], .storefront .field textarea[aria-invalid="true"], .storefront .checkout-phone-control[data-invalid="true"] { border-color: #b13326; }
+.storefront .checkout-field-error { margin: 0; color: #b13326; font-size: 12px; line-height: 1.6; }
 .storefront .checkbox-line { font-size: 13px; }
 .storefront .cart-item-title { min-width: 0; }
 .storefront .cart-item-title h3 { font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
