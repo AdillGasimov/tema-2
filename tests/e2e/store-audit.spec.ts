@@ -65,7 +65,7 @@ test("public policies, delivery, footer, category navigation and SEO are complet
   await expect(page.locator("#delivery")).toContainText("3 iş günü"); await expect(page.locator("#delivery")).toContainText("4 iş günü"); await expect(page.locator("#delivery")).toContainText("pulsuz"); await expect(page.locator("#delivery")).toContainText("5,00"); await expect(page.locator("#delivery")).toContainText("WhatsApp");
   await page.locator('.store-footer a[href="/#delivery"]').click(); await expect(page).toHaveURL(/\/#delivery$/); await expect(page.locator("#delivery")).toBeInViewport();
   for (const path of ["/privacy", "/terms", "/returns"]) { const link = page.locator(`.store-footer a[href="${path}"]`); await expect(link).toBeVisible(); expect((await page.request.get(path)).status()).toBe(200); }
-  for (const label of ["Şirkət adı", "VÖEN", "Telefon", "Ünvan"]) await expect(page.locator(".footer-business")).toContainText(label);
+  await expect(page.locator(".footer-business, #business-info")).toHaveCount(0);
   const image = await page.locator('meta[property="og:image"]').getAttribute("content"); const response = await page.request.get(image!); expect(response.status()).toBe(200); expect((await sharp(await response.body()).metadata()).width).toBe(1200);
   const robots = await (await page.request.get("/robots.txt")).text(); expect(robots).toContain("Allow: /api/media/"); expect(robots).toContain("Disallow: /cart"); expect(robots).toContain("sitemap.xml");
   const sitemap = await (await page.request.get("/sitemap.xml")).text(); for (const path of ["/terms", "/returns", "/privacy"]) expect(sitemap).toContain(path);
@@ -119,7 +119,7 @@ test("filters, all sort orders, invalid ranges and pagination work together", as
   await page.getByLabel("Axtarış", { exact: true }).fill(`Tapılmayan-${suffix}`); await page.getByRole("button", { name: "Tətbiq et", exact: true }).click(); await expect(page.getByRole("heading", { name: "Məhsul tapılmadı.", exact: true })).toBeVisible();
 });
 
-test("short description, price-review flag and business placeholders can be edited; partner code login works", async ({ page }) => {
+test("short description, price-review flag and business details can be edited; partner code login works", async ({ page }) => {
   await admin.goto("/admin/products"); await admin.getByLabel("Məhsullarda axtar", { exact: true }).fill(single.name); await admin.getByRole("button", { name: `${single.name} redaktə et`, exact: true }).click();
   await admin.getByLabel("Qısa təsvir", { exact: true }).fill("Yenilənmiş qısa Azərbaycan təsviri."); await admin.getByLabel("Qiymət yoxlaması tələb olunur", { exact: true }).check();
   let response = admin.waitForResponse(r => r.url().endsWith("/api/admin/products") && r.request().method() === "POST"); await admin.getByRole("button", { name: "Yadda saxla", exact: true }).click(); expect((await response).ok()).toBe(true); await expect(admin.locator('.price-review-flag')).toBeVisible();
@@ -127,6 +127,6 @@ test("short description, price-review flag and business placeholders can be edit
   await admin.getByLabel("Qiymət yoxlaması tələb olunur", { exact: true }).uncheck(); response = admin.waitForResponse(r => r.url().endsWith("/api/admin/products") && r.request().method() === "POST"); await admin.getByRole("button", { name: "Yadda saxla", exact: true }).click(); expect((await response).ok()).toBe(true); await expect(admin.locator('.price-review-flag')).toHaveCount(0);
   await admin.goto("/admin/settings"); await admin.getByLabel("Hüquqi şirkət və ya sahibkar adı", { exact: true }).fill("Sınaq şirkəti"); await admin.getByLabel("VÖEN", { exact: true }).fill("1234567890"); await admin.getByLabel("Biznes ünvanı", { exact: true }).fill("Sınaq şəhəri, Sınaq küçəsi 12");
   const saved = admin.waitForResponse(r => r.url().endsWith("/api/admin/settings") && r.request().method() === "POST"); await admin.getByRole("button", { name: "Bütün tənzimləmələri saxla", exact: true }).click(); expect((await saved).ok()).toBe(true);
-  await page.goto("/privacy"); await expect(page.locator('.footer-business')).toContainText("Sınaq şirkəti"); await expect(page.locator('.footer-business')).toContainText("1234567890"); await expect(page.locator('.policy-contact')).toContainText("Sınaq şirkəti");
+  await page.goto("/privacy"); await expect(page.locator('.footer-business, #business-info')).toHaveCount(0); await expect(page.locator('.policy-contact')).toContainText("Sınaq şirkəti");
   await page.goto("/"); await page.getByRole("link", { name: "Tərəfdaş girişi", exact: true }).click(); await expect(page).toHaveURL(/\/login$/); await signIn(page, fixture().foreignCode, fixture().password); await expect(page).toHaveURL(/\/partner$/); await expect(page.locator('.dashboard-sidebar')).toBeVisible();
 });

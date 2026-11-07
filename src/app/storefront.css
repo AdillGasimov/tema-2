@@ -270,11 +270,6 @@
 .delivery-confirmation { display: flex; align-items: center; gap: 10px; padding-top: 20px; margin: 22px 0 0; border-top: 1px solid var(--line); font-size: 14px; }
 .delivery-confirmation svg { flex-shrink: 0; }
 .delivery-extra { font-size: 13px; margin: 14px 0 0; }
-.storefront .footer-business { border-top: 1px solid #ffffff20; padding-block: 25px; }
-.storefront .footer-business h3 { font-size: 14px; letter-spacing: 0; margin-bottom: 17px; }
-.footer-business dl { display: grid; grid-template-columns: 1.2fr .8fr 1fr 1.5fr; gap: 24px; margin: 0; }
-.footer-business dt { color: #b4c1ac; font-size: 11px; margin-bottom: 6px; }
-.footer-business dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
 .policy-contact { display: flex; flex-direction: column; gap: 10px; padding: 22px; background: #eef2e7; border-radius: 10px; font-size: 14px; font-style: normal; margin-top: 20px; }
 .policy-contact a, .storefront .prose p a { text-decoration: underline; text-underline-offset: 3px; }
 .cart-storage-note { padding: 16px 19px; background: #eef3e5; border: 1px solid #dce6cf; border-radius: 9px; font-size: 13px; margin-bottom: 26px; }
@@ -289,7 +284,6 @@
   .delivery-policy-grid { grid-template-columns: 1fr; gap: 24px; }
   .delivery-policy-grid svg { margin-bottom: 8px; }
   .delivery-confirmation { align-items: flex-start; font-size: 13px; }
-  .footer-business dl { grid-template-columns: 1fr 1fr; gap: 22px; }
   .product-full-description { padding: 22px; }
   .detail-short-description { font-size: 15px; }
 }

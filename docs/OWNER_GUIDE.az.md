@@ -73,7 +73,7 @@ Etibarlı referal linki standart olaraq 30 gün yadda qalır. Birbaşa giriş on
 
 ## Ana səhifənin görünüşü
 
-**Biznes məlumatları:** Tənzimləmələrdə hüquqi şirkət/sahibkar adını, 10 rəqəmli VÖEN-i və biznes ünvanını doldurun. Bunlar saytda açıq göstərilir; boş hüquqi sahələr aşağı hissədə “—” qalır. Telefon üçün **Əlaqə telefonu** işlədilir, boşdursa mövcud WhatsApp nömrəsi göstərilir.
+**Biznes məlumatları:** Saytın aşağı hissəsində ayrıca biznes məlumatları bloku göstərilmir. Tənzimləmələrdə hüquqi ad, VÖEN və ünvan saxlanıla bilər; hüquqi ad və ünvan daxil edildikdə siyasət səhifələrinin əlaqə hissəsində görünür. Əlaqə nömrəsi üçün **Əlaqə telefonu**, boşdursa mövcud WhatsApp nömrəsi işlədilir.
 
 **Çatdırılma:** bölgələr, pulsuz çatdırılma bölgələri, müddət və standart haqq həmin bölmədə dəyişir. Pulsuz bölgə adını bölgə siyahısındakı kimi yazın. Sifarişdə seçilən ünvana görə haqq avtomatik hesablanır; köhnə sifarişlərin haqqı dəyişmir. Razılaşdırılmış cari qayda: 28 May (Bakı) pulsuz, digər ünvanlar 5 ₼; 3 iş günü, rayonlara 4 iş günü. Dəqiq tarix WhatsApp-da təsdiqlənir.
 
