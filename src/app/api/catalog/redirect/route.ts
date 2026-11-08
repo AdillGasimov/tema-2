@@ -9,7 +9,7 @@ const slugSchema = z.string().regex(/^[a-z0-9-]{1,180}$/);
 export async function GET(request: NextRequest) {
   return endpoint(async () => {
     const slug = slugSchema.parse(request.nextUrl.searchParams.get("slug"));
-    const alias = await db.productSlugAlias.findUnique({ where: { oldSlug: slug }, select: { product: { select: { slug: true, status: true, rightsReviewRequired: true } } } });
-    return { slug: alias?.product.status === "PUBLISHED" && !alias.product.rightsReviewRequired ? alias.product.slug : null };
+    const alias = await db.productSlugAlias.findUnique({ where: { oldSlug: slug }, select: { product: { select: { slug: true, status: true } } } });
+    return { slug: alias?.product.status === "PUBLISHED" ? alias.product.slug : null };
   });
 }

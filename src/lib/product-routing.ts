@@ -19,7 +19,7 @@ export async function productAliasTarget(slug: string): Promise<string | null> {
       }
     }
     const result = await state.pool.query<{ slug: string }>(
-      'SELECT p.slug FROM "ProductSlugAlias" a JOIN "Product" p ON p.id = a."productId" WHERE a."oldSlug" = $1 AND p.status = $2 AND p."rightsReviewRequired" = false LIMIT 1',
+      'SELECT p.slug FROM "ProductSlugAlias" a JOIN "Product" p ON p.id = a."productId" WHERE a."oldSlug" = $1 AND p.status = $2 LIMIT 1',
       [slug, "PUBLISHED"],
     );
     return result.rows[0]?.slug ?? null;

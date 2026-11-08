@@ -60,7 +60,7 @@ export async function createOrder(raw: unknown, cookieCode?: string | null) {
     let subtotalMinor = 0;
     for (const [variantId, quantity] of quantities) {
       const v = await tx.productVariant.findUnique({ where: { id: variantId }, include: { product: { include: { category: true } } } });
-      if (!v || !v.active || v.product.status !== "PUBLISHED" || v.product.rightsReviewRequired) throw new AppError("Məhsul artıq satışda deyil.");
+      if (!v || !v.active || v.product.status !== "PUBLISHED") throw new AppError("Məhsul artıq satışda deyil.");
       if (quantity > 100 || v.stock - v.reserved < quantity) throw new AppError(`${v.product.name}: kifayət qədər stok yoxdur.`, 409);
       const unitPriceMinor = v.discountMinor ?? v.priceMinor;
       subtotalMinor += unitPriceMinor * quantity;

@@ -6,7 +6,7 @@ import { endpoint } from "@/lib/http";
 export async function GET(request: NextRequest) {
   return endpoint(async () => {
     const ids = z.array(z.string().min(1).max(100)).min(1).max(50).parse(request.nextUrl.searchParams.get("ids")?.split(","));
-    const variants = await db.productVariant.findMany({ where: { id: { in: ids }, active: true, product: { status: "PUBLISHED", rightsReviewRequired: false } }, select: {
+    const variants = await db.productVariant.findMany({ where: { id: { in: ids }, active: true, product: { status: "PUBLISHED" } }, select: {
       id: true, name: true, priceMinor: true, discountMinor: true, stock: true, reserved: true,
       product: { select: { name: true, slug: true, images: { orderBy: { position: "asc" }, take: 1, select: { key: true } } } },
     } });

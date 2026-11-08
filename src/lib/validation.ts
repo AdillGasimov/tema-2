@@ -25,6 +25,7 @@ export const variantSchema = z.object({
 export const productSchema = z.object({
   id: id.optional(), name: z.string().trim().min(2).max(160), slug: z.string().regex(/^[a-z0-9-]+$/).max(180),
   description: z.string().max(10000), shortDescription: z.string().trim().max(500).optional(), needsPriceReview: z.boolean().optional(),
+  // Compatibility with cached old admin forms; ignored by product mutations.
   rightsReviewRequired: z.boolean().optional(), rightsClearance: z.string().trim().max(2000).optional(),
   categoryId: id, status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]), featured: z.boolean(),
   seoTitle: z.string().max(180).optional(), seoDescription: z.string().max(300).optional(), variants: z.array(variantSchema).min(1).max(30),

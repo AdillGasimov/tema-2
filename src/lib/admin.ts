@@ -40,9 +40,8 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
   if (resource === "product-bulk") {
     const v = z.object({ ids: z.array(id).min(1).max(100), status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]) }).strict().parse(raw);
     return transaction(async tx => {
-      const products = await tx.product.findMany({ where: { id: { in: v.ids }, status: { not: "DELETED" } }, select: { id: true, rightsReviewRequired: true } });
-      if (v.status === "PUBLISHED" && products.some(p => p.rightsReviewRequired)) throw new AppError("Nişan və təsvirlər üzrə hüquq yoxlaması tamamlanmalıdır.", 409);
-      const result = await tx.product.updateMany({ where: { id: { in: products.map(p => p.id) } }, data: { status: v.status } });
+      const products = await tx.product.findMany({ where: { id: { in: v.ids }, status: { not: "DELETED" } }, select: { id: true } });
+      const result = await tx.product.updateMany({ where: { id: { in: products.map(p => p.id) } }, data: { status: v.status, rightsReviewRequired: false } });
       for (const product of products) await audit(tx, actorId, "product.bulk-status", "Product", product.id, { status: v.status }); return result;
     });
   }
@@ -50,13 +49,13 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
     const v = productSchema.parse(raw);
     return transaction(async tx => {
       const { variants, id: productId, ...data } = v;
+      // Cached older forms may still send these retired fields.
+      delete data.rightsReviewRequired;
+      delete data.rightsClearance;
       await lockProductSlugs(tx);
       await assertProductSlugAvailable(tx, data.slug, productId);
-      const previous = productId ? await tx.product.findUniqueOrThrow({ where: { id: productId, status: { not: "DELETED" } }, select: { slug: true, rightsReviewRequired: true, rightsClearance: true } }) : null;
-      const rightsPending = data.rightsReviewRequired ?? previous?.rightsReviewRequired ?? false;
-      if (rightsPending && data.status === "PUBLISHED") throw new AppError("Nişan və təsvirlər üzrə hüquq yoxlaması tamamlanmalıdır.", 409);
-      if (previous?.rightsReviewRequired && !rightsPending && (data.rightsClearance ?? "").trim().length < 10) throw new AppError("Hüquq yoxlamasının nəticəsini və sənəd istinadını yazın.", 409);
-      const product = productId ? await tx.product.update({ where: { id: productId, status: { not: "DELETED" } }, data }) : await tx.product.create({ data });
+      const previous = productId ? await tx.product.findUniqueOrThrow({ where: { id: productId, status: { not: "DELETED" } }, select: { slug: true } }) : null;
+      const product = productId ? await tx.product.update({ where: { id: productId, status: { not: "DELETED" } }, data: { ...data, rightsReviewRequired: false } }) : await tx.product.create({ data });
       if (previous && previous.slug !== product.slug) await retainProductSlug(tx, product.id, previous.slug);
       const current = await tx.productVariant.findMany({ where: { productId: product.id } });
       const kept: string[] = [];
@@ -73,7 +72,7 @@ export async function adminMutation(resource: string, raw: unknown, actorId: str
         if (delta) await tx.inventoryMovement.create({ data: { variantId: saved.id, kind: "ADJUSTMENT", quantity: delta, reason: "Məhsul forması ilə stok yeniləndi" } });
       }
       await tx.productVariant.updateMany({ where: { productId: product.id, id: { notIn: kept } }, data: { active: false } });
-      await audit(tx, actorId, productId ? "product.update" : "product.create", "Product", product.id, { status: product.status, rightsReviewRequired: product.rightsReviewRequired, rightsClearance: product.rightsClearance, stockVerification: variants.filter(v => v.stockVerified !== undefined).map(v => ({ variantId: v.id, verified: v.stockVerified })), ...(previous && previous.slug !== product.slug ? { previousSlug: previous.slug, slug: product.slug } : {}) });
+      await audit(tx, actorId, productId ? "product.update" : "product.create", "Product", product.id, { status: product.status, stockVerification: variants.filter(v => v.stockVerified !== undefined).map(v => ({ variantId: v.id, verified: v.stockVerified })), ...(previous && previous.slug !== product.slug ? { previousSlug: previous.slug, slug: product.slug } : {}) });
       return product;
     });
   }

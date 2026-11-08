@@ -26,10 +26,10 @@ async function inspect(reader: Reader, p: StorefrontAvailabilityPlan) {
   const announcement = freeDeliveryMessage(p.settings.deliveryFreeRegions)!;
   const settings = await reader.storeSettings.findUniqueOrThrow({ where: { id: "store" } });
   if (![p.settings.announcement, announcement].includes(settings.announcement) || settings.deliveryFreeRegions !== p.settings.deliveryFreeRegions || settings.deliveryFeeMinor !== p.settings.deliveryFeeMinor) throw new AppError("Delivery settings changed since owner confirmation.", 409);
-  const variants = await reader.productVariant.findMany({ where: { id: { in: p.variants.map(v => v.id) } }, include: { product: { select: { status: true, rightsReviewRequired: true } } } });
+  const variants = await reader.productVariant.findMany({ where: { id: { in: p.variants.map(v => v.id) } }, include: { product: { select: { status: true } } } });
   for (const expected of p.variants) {
     const v = variants.find(v => v.id === expected.id);
-    if (!v || v.productId !== expected.productId || v.storeSku !== expected.storeSku || !v.active || v.product.status !== "PUBLISHED" || v.product.rightsReviewRequired) throw new AppError(`Confirmed product changed: ${expected.id}.`, 409);
+    if (!v || v.productId !== expected.productId || v.storeSku !== expected.storeSku || !v.active || v.product.status !== "PUBLISHED") throw new AppError(`Confirmed product changed: ${expected.id}.`, 409);
     if (v.stock <= v.reserved) throw new AppError(`Confirmed product has no available recorded stock: ${expected.storeSku}.`, 409);
   }
   return { settings, variants, announcement };

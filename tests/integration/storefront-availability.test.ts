@@ -58,12 +58,12 @@ describe("owner-confirmed storefront stock and delivery", () => {
     await expect(applyStorefrontAvailability({ ...p, variants: [...p.variants, ...p.variants] })).rejects.toThrow("Duplicate variant");
     expect((await db.productVariant.findUniqueOrThrow({ where: { id: a.variants[0].id } })).stockVerified).toBe(false);
   });
-  it.each(["empty", "reserved", "held", "inactive"])("rolls back the whole confirmation when a %s item is no longer available", async state => {
+  it.each(["empty", "reserved", "draft", "inactive"])("rolls back the whole confirmation when a %s item is no longer available", async state => {
     const a = await product(`good-${state}`), b = await product(`bad-${state}`), p = plan([a, b], state);
     if (state === "empty") await db.productVariant.update({ where: { id: b.variants[0].id }, data: { stock: 0 } });
     if (state === "reserved") await db.productVariant.update({ where: { id: b.variants[0].id }, data: { reserved: 5 } });
     if (state === "inactive") await db.productVariant.update({ where: { id: b.variants[0].id }, data: { active: false } });
-    if (state === "held") await db.product.update({ where: { id: b.id }, data: { status: "DRAFT", rightsReviewRequired: true } });
+    if (state === "draft") await db.product.update({ where: { id: b.id }, data: { status: "DRAFT" } });
     await expect(applyStorefrontAvailability(p)).rejects.toThrow();
     expect((await db.productVariant.findUniqueOrThrow({ where: { id: a.variants[0].id } })).stockVerified).toBe(false);
     expect((await db.storeSettings.findUniqueOrThrow({ where: { id: "store" } })).announcement).toBe("");

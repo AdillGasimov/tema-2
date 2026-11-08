@@ -195,7 +195,7 @@ test("short description, price-review flag and business details can be edited; p
   await page.goto("/"); await page.getByRole("link", { name: "Tərəfdaş girişi", exact: true }).click(); await expect(page).toHaveURL(/\/login$/); await signIn(page, fixture().foreignCode, fixture().password); await expect(page).toHaveURL(/\/partner$/); await expect(page.locator('.dashboard-sidebar')).toBeVisible();
 });
 
-test("owned SKUs, unverified stock, refreshed cart prices and reviewed publication work", async ({ page }) => {
+test("owned SKUs, unverified stock, refreshed cart prices and direct publication work", async ({ page }) => {
   await page.goto(`/products/${unverified.slug}`);
   await expect(page.locator('.purchase .stock-check')).toContainText("Mövcudluğu dəqiqləşdirin");
   await expect(page.locator('.purchase .stock-check')).toContainText(unverified.variants[0].storeSku!);
@@ -214,10 +214,15 @@ test("owned SKUs, unverified stock, refreshed cart prices and reviewed publicati
   await page.goto(`/products/${unverified.slug}`); await expect(page.locator('.purchase .in-stock')).toContainText("Stokda");
   expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...changed, status: "DRAFT", rightsReviewRequired: true } })).ok()).toBe(true);
   expect((await page.request.get(`/products/${unverified.slug}`)).status()).toBe(404);
-  expect((await admin.request.post("/api/admin/product-bulk", { headers: origin, data: { ids: [unverified.id], status: "PUBLISHED" } })).status()).toBe(409);
-  expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...changed, rightsReviewRequired: false, rightsClearance: "" } })).status()).toBe(409);
   await page.goto("/cart"); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
-  expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...changed, rightsReviewRequired: false, rightsClearance: "Yalnız test nümunəsi üçün sənəd istinadı 123" } })).ok()).toBe(true);
+  await admin.goto("/admin/products");
+  await admin.getByRole("button", { name: `${unverified.name} redaktə et`, exact: true }).click();
+  await expect(admin.locator('input[name="rightsReviewRequired"], textarea[name="rightsClearance"]')).toHaveCount(0);
+  await admin.locator('select[name="status"]').selectOption("PUBLISHED");
+  const published = admin.waitForResponse(r => r.url().endsWith("/api/admin/products") && r.request().method() === "POST");
+  await admin.getByRole("button", { name: "Yadda saxla", exact: true }).click(); expect((await published).ok()).toBe(true);
+  expect((await admin.request.post("/api/admin/product-bulk", { headers: origin, data: { ids: [unverified.id], status: "DRAFT" } })).ok()).toBe(true);
+  expect((await admin.request.post("/api/admin/product-bulk", { headers: origin, data: { ids: [unverified.id], status: "PUBLISHED" } })).ok()).toBe(true);
   expect((await page.request.get(`/products/${unverified.slug}`)).status()).toBe(200);
   await page.goto("/returns"); await expect(page.locator("main")).toContainText("3 təqvim günü"); await expect(page.locator("main")).toContainText("alış günü sayılmadan 14 gün"); await expect(page.locator("main")).toContainText("7 iş günü");
 });
