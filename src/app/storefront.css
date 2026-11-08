@@ -295,7 +295,3 @@
 }
 
 .storefront .product-price { flex-wrap: wrap; gap: 8px; }
-.stock-check { color: #79622c; background: #f5f1e6; border-radius: 5px; padding: 4px 7px; font-size: 11px; line-height: 1.5; }
-.product-card .stock-check { max-width: 100%; }
-.product-card .stock-check i { display: none; }
-.purchase > .stock-check { display: inline-block; margin-block: 14px; font-size: 13px; }

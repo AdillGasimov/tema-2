@@ -195,13 +195,14 @@ test("short description, price-review flag and business details can be edited; p
   await page.goto("/"); await page.getByRole("link", { name: "Tərəfdaş girişi", exact: true }).click(); await expect(page).toHaveURL(/\/login$/); await signIn(page, fixture().foreignCode, fixture().password); await expect(page).toHaveURL(/\/partner$/); await expect(page.locator('.dashboard-sidebar')).toBeVisible();
 });
 
-test("owned SKUs, unverified stock, refreshed cart prices and direct publication work", async ({ page }) => {
+test("owned SKUs, recorded stock, refreshed cart prices and direct publication work", async ({ page }) => {
   await page.goto(`/products/${unverified.slug}`);
-  await expect(page.locator('.purchase .stock-check')).toContainText("Mövcudluğu dəqiqləşdirin");
-  await expect(page.locator('.purchase .stock-check')).toContainText(unverified.variants[0].storeSku!);
+  await expect(page.locator('.purchase .in-stock')).toContainText("Stokda");
+  await expect(page.locator('.purchase .in-stock')).toContainText(unverified.variants[0].storeSku!);
+  await expect(page.locator('.stock-check')).toHaveCount(0);
   expect(await page.locator('.purchase').innerText()).not.toContain(unverified.variants[0].sku);
   const jsonld = JSON.parse(await page.locator('script[type="application/ld+json"]').innerText());
-  expect(jsonld.offers[0].sku).toMatch(/^FC-\d{4,}$/); expect(jsonld.offers[0]).not.toHaveProperty("availability");
+  expect(jsonld.offers[0].sku).toMatch(/^FC-\d{4,}$/); expect(jsonld.offers[0].availability).toBe("https://schema.org/InStock");
   const publicCatalog = await (await page.request.get(`/api/catalog?q=${encodeURIComponent(unverified.name)}`)).json();
   expect(publicCatalog.products[0].variants[0]).not.toHaveProperty("sku");
   await page.getByRole("button", { name: "Səbətə əlavə et", exact: true }).click();
