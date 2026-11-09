@@ -9,5 +9,5 @@ export async function POST(req: NextRequest) { return endpoint(async () => {
   const order = await createOrder(await req.json(), readReferral((await cookies()).get(REFERRAL_COOKIE)?.value));
   const settings = await getSettings();
   return { reference: order.reference, status: order.status, totalMinor: order.totalMinor,
-    whatsappUrl: `https://wa.me/${settings.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(whatsappMessage(order))}` };
+    whatsappUrl: `https://wa.me/${settings.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(whatsappMessage(order, settings.brandName))}` };
 }); }

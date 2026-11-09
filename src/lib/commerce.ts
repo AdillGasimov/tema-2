@@ -6,7 +6,7 @@ import { AppError } from "./errors";
 import { checkoutSchema, codeSchema, id, minor } from "./validation";
 import { normalizeCheckoutPhone } from "./checkout-contact";
 import { deliveryCharge } from "./delivery";
-import { paymentState } from "./money";
+import { money, paymentState } from "./money";
 import { transitions, canConfirmDelivery } from "./order-status";
 export { transitions } from "./order-status";
 
@@ -99,14 +99,25 @@ export async function createOrder(raw: unknown, cookieCode?: string | null) {
     throw error;
   }
 }
-export function whatsappMessage(order: Awaited<ReturnType<typeof createOrder>>) {
-  const amount = (n: number) => `${(n / 100).toFixed(2)} AZN`;
-  return ["Salam!", "Sifariş vermək istəyirəm.", `Sifariş nömrəsi: ${order.reference}`, "", "Məhsullar:",
-    ...order.items.map(i => `- ${i.productName} (${i.variantName}) — ${i.quantity} ədəd — ${amount(i.unitPriceMinor * i.quantity)}`),
-    `Çatdırılma: ${amount(order.deliveryChargedMinor)}`, `Ümumi məbləğ: ${amount(order.totalMinor)}`, "",
-    `Ad: ${order.customerName}`, `Telefon: ${order.phone}`, `Ünvan: ${order.city}, ${order.address}`,
-    ...(order.notes ? [`Qeyd: ${order.notes}`] : []), ...(order.referralCode ? [`Referal kodu: ${order.referralCode}`] : []),
-  ].join("\n");
+export function whatsappMessage(order: Awaited<ReturnType<typeof createOrder>>, storeName?: string) {
+  const products = order.items.map((item, index) => [
+    `${index + 1}. *${item.productName}*`,
+    ...(item.variantName.toLocaleLowerCase("az") !== "standart" ? [`   Variant: ${item.variantName}`] : []),
+    `   ${item.quantity} ədəd × ${money(item.unitPriceMinor)} = *${money(item.unitPriceMinor * item.quantity)}*`,
+  ].join("\n")).join("\n\n");
+  return [
+    `Salam! 👋\n${storeName?.trim() ? `*${storeName.trim()}* mağazasından sifariş vermək istəyirəm.` : "Sifariş vermək istəyirəm."}`,
+    `🧾 *Sifariş nömrəsi:* ${order.reference}`,
+    `🛍️ *Məhsullar*\n${products}`,
+    ["💰 *Məbləğ*", `Məhsulların cəmi: ${money(order.subtotalMinor)}`,
+      `🚚 Çatdırılma: ${order.deliveryChargedMinor === 0 ? "Ödənişsiz" : money(order.deliveryChargedMinor)}`,
+      `*Yekun məbləğ: ${money(order.totalMinor)}*`].join("\n"),
+    `👤 *Müştəri məlumatları*\nAd və soyad: ${order.customerName}\n📞 Telefon: ${order.phone}`,
+    `📍 *Çatdırılma ünvanı*\n${order.city}\n${order.address}`,
+    ...(order.notes.trim() ? [`📝 *Qeyd*\n${order.notes.trim()}`] : []),
+    ...(order.referralCode ? [`🎟️ *Referal kodu:* ${order.referralCode}`] : []),
+    "Zəhmət olmasa, sifarişi təsdiqləyin. ✅",
+  ].join("\n\n");
 }
 async function reverseCommission(tx: Tx, orderId: string, reason: string) {
   const c = await tx.commission.findUnique({ where: { orderId } });

@@ -101,9 +101,14 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
   await expect(page.getByLabel("Şəhər və ya bölgə", { exact: true })).toHaveValue("28 May (Bakı)"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("0,00");
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("Bakı"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("5,00");
   await page.getByLabel("Ad və soyad", { exact: true }).fill("Sınaq alıcısı"); await page.getByLabel("Telefon nömrəsi", { exact: true }).fill("+994500005566"); await page.getByLabel("Çatdırılma ünvanı", { exact: true }).fill("Sınaq ünvanı 12"); await page.locator('input[type="checkbox"]').check();
+  await page.getByLabel("Əlavə qeyd (istəyə bağlı)", { exact: true }).fill("Gəlməzdən əvvəl zəng edin.\nQapı № 12 🔔");
   await page.context().route("https://wa.me/**", route => route.fulfill({ body: "WhatsApp handoff intercepted; no message sent." }));
   const popupPromise = page.waitForEvent("popup"); await page.getByRole("button", { name: "Sifariş ver", exact: true }).click(); const popup = await popupPromise; await expect(page.getByTestId("order-reference")).toBeVisible(); await popup.waitForURL(/https:\/\/wa.me\//);
   const message = new URL(popup.url()).searchParams.get("text")!; expect(message).toContain("Sınaq alıcısı"); expect(message).toContain(multi.name); expect(message).toMatch(/Çatdırılma: 5[.,]00/); expect(message).toContain(await page.getByTestId("order-reference").innerText());
+  expect(message).toContain(`*${initial.settings.brandName}* mağazasından`); expect(message).toContain("Salam! 👋\n"); expect(message).toContain("\n\n🛍️ *Məhsullar*\n1. *");
+  expect(message).toContain("Variant: Böyük"); expect(message).toContain("1 ədəd × 20,00\u00a0₼ = *20,00\u00a0₼*"); expect(message).toContain("*Yekun məbləğ: 25,00\u00a0₼*");
+  expect(message).toContain("👤 *Müştəri məlumatları*"); expect(message).toContain("📍 *Çatdırılma ünvanı*\nBakı\nSınaq ünvanı 12"); expect(message).toContain("✅");
+  expect(message).toContain("📝 *Qeyd*\nGəlməzdən əvvəl zəng edin.\nQapı № 12 🔔"); expect(message).toContain(`🎟️ *Referal kodu:* ${fixture().foreignCode}`);
   await popup.close(); await page.goto("/cart"); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
 });
 

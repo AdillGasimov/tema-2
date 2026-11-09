@@ -93,6 +93,9 @@ describe("new-order delivery snapshots", () => {
     const free = await createOrder(request("28 May (Bakı)")); const input = request("Bakı"); const paid = await createOrder(input); const district = await createOrder(request("Digər bölgələr"));
     expect(free.deliveryChargedMinor).toBe(0); expect(paid.deliveryChargedMinor).toBe(500); expect(district.deliveryChargedMinor).toBe(500);
     expect(paid.totalMinor).toBe(2000); expect(whatsappMessage(paid)).toMatch(/Çatdırılma: 5[.,]00/);
+    const message = whatsappMessage(free, "FuryCar");
+    expect(message).toContain("*FuryCar* mağazasından"); expect(message).toContain("🚚 Çatdırılma: Ödənişsiz");
+    expect(message).toContain("*Yekun məbləğ: 15,00\u00a0₼*"); expect(message).not.toContain("Variant: Standart");
     await db.storeSettings.update({ where: { id: "store" }, data: { deliveryFeeMinor: 700 } });
     expect((await createOrder(input)).deliveryChargedMinor).toBe(500);
     expect((await db.order.findUniqueOrThrow({ where: { id: paid.id } })).totalMinor).toBe(2000);
