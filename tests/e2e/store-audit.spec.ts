@@ -102,14 +102,43 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("Bakı"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("5,00");
   await page.getByLabel("Ad və soyad", { exact: true }).fill("Sınaq alıcısı"); await page.getByLabel("Telefon nömrəsi", { exact: true }).fill("+994500005566"); await page.getByLabel("Çatdırılma ünvanı", { exact: true }).fill("Sınaq ünvanı 12"); await page.locator('input[type="checkbox"]').check();
   await page.getByLabel("Əlavə qeyd (istəyə bağlı)", { exact: true }).fill("Gəlməzdən əvvəl zəng edin.\nQapı № 12 🔔");
-  await page.context().route("https://wa.me/**", route => route.fulfill({ body: "WhatsApp handoff intercepted; no message sent." }));
-  const popupPromise = page.waitForEvent("popup"); await page.getByRole("button", { name: "Sifariş ver", exact: true }).click(); const popup = await popupPromise; await expect(page.getByTestId("order-reference")).toBeVisible(); await popup.waitForURL(/https:\/\/wa.me\//);
+  await page.context().route(/^https:\/\/(wa\.me|web\.whatsapp\.com)\//, route => route.fulfill({ body: "WhatsApp handoff intercepted; no message sent." }));
+  let orderPosts = 0; page.on("request", request => { if (request.url().endsWith("/api/orders") && request.method() === "POST") orderPosts++; });
+  const popupPromise = page.waitForEvent("popup"); await page.getByRole("button", { name: "Sifariş ver", exact: true }).click(); const popup = await popupPromise; await expect(page.getByTestId("order-reference")).toBeVisible(); await popup.waitForURL(/https:\/\/web\.whatsapp\.com\/send/);
   const message = new URL(popup.url()).searchParams.get("text")!; expect(message).toContain("Sınaq alıcısı"); expect(message).toContain(multi.name); expect(message).toMatch(/Çatdırılma: 5[.,]00/); expect(message).toContain(await page.getByTestId("order-reference").innerText());
   expect(message).toContain(`*${initial.settings.brandName}* mağazasından`); expect(message).toContain("Salam! 👋\n"); expect(message).toContain("\n\n🛍️ *Məhsullar*\n1. *");
   expect(message).toContain("Variant: Böyük"); expect(message).toContain("1 ədəd × 20,00\u00a0₼ = *20,00\u00a0₼*"); expect(message).toContain("*Yekun məbləğ: 25,00\u00a0₼*");
   expect(message).toContain("👤 *Müştəri məlumatları*"); expect(message).toContain("📍 *Çatdırılma ünvanı*\nBakı\nSınaq ünvanı 12"); expect(message).toContain("✅");
   expect(message).toContain("📝 *Qeyd*\nGəlməzdən əvvəl zəng edin.\nQapı № 12 🔔"); expect(message).toContain(`🎟️ *Referal kodu:* ${fixture().foreignCode}`);
+  expect(message).not.toContain("\ufffd");
+  await expect(page.getByRole("link", { name: "WhatsApp Web-də aç", exact: true })).toHaveAttribute("href", popup.url());
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (text: string) => { sessionStorage.setItem("copied-whatsapp", text); } } }));
+  await page.getByRole("button", { name: "Mesajı kopyala", exact: true }).click(); await expect(page.locator('.success-card [role="status"]')).toContainText("Mesaj emojilərlə birlikdə kopyalandı.");
+  expect(await page.evaluate(() => sessionStorage.getItem("copied-whatsapp"))).toBe(message);
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new DOMException("Denied", "NotAllowedError"); } } }));
+  await page.getByRole("button", { name: "Mesajı kopyala", exact: true }).click(); await expect(page.locator('.success-card [role="alert"]')).toContainText("Avtomatik kopyalama alınmadı.");
+  await expect(page.getByLabel("Sifariş mesajı", { exact: true })).toBeVisible(); await expect(page.getByLabel("Sifariş mesajı", { exact: true })).toHaveValue(message);
+  expect(orderPosts).toBe(1);
   await popup.close(); await page.goto("/cart"); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
+});
+
+test("mobile WhatsApp link preserves emoji when the automatic popup is blocked", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", { get: () => "Mozilla/5.0 (Linux; Android 14) Chrome/138 Mobile" });
+    window.open = () => null;
+  });
+  await page.goto(`/products/${single.slug}`); await page.getByRole("button", { name: "İndi sifariş et", exact: true }).click(); await expect(page).toHaveURL(/\/checkout$/);
+  await page.getByLabel("Ad və soyad", { exact: true }).fill("Mobil sınaq alıcısı"); await page.getByLabel("Telefon nömrəsi", { exact: true }).fill("501234567");
+  await page.getByLabel("Çatdırılma ünvanı", { exact: true }).fill("Sınaq ünvanı 12"); await page.locator('input[name="consent"]').check();
+  const submitted = page.waitForResponse(r => r.url().endsWith("/api/orders") && r.request().method() === "POST");
+  await page.getByRole("button", { name: "Sifariş ver", exact: true }).click(); const response = await submitted; expect(response.ok()).toBe(true); const order = await response.json();
+  await expect(page.getByTestId("order-reference")).toHaveText(order.reference);
+  await expect(page.getByRole("link", { name: "WhatsApp-da aç", exact: true })).toHaveAttribute("href", order.whatsappUrl);
+  expect(new URL(order.whatsappUrl).hostname).toBe("wa.me"); expect(new URL(order.whatsappUrl).searchParams.get("text")).toBe(order.whatsappMessage);
+  expect(order.whatsappMessage).toContain("Salam! 👋"); expect(order.whatsappMessage).toContain("✅"); expect(order.whatsappMessage).not.toContain("\ufffd");
+  await expect(page.getByRole("button", { name: "Mesajı kopyala", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("checkout contact errors block invalid submissions, normalize phone entry and display server failures", async ({ page }) => {

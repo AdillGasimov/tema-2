@@ -295,3 +295,9 @@
 }
 
 .storefront .product-price { flex-wrap: wrap; gap: 8px; }
+.whatsapp-order-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }
+.success-card .whatsapp-order-actions .btn { margin: 0; }
+.whatsapp-copy-feedback { font-size: 14px; }
+.whatsapp-order-preview { margin: 18px 0; text-align: left; }
+.whatsapp-order-preview summary { cursor: pointer; font-weight: 600; }
+.whatsapp-order-preview textarea { display: block; width: 100%; margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; line-height: 1.6; resize: vertical; }

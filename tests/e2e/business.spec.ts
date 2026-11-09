@@ -90,10 +90,10 @@ test("complete UI workflow: product + image + partner → referral checkout → 
   await shop.getByLabel("Ad və soyad", { exact: true }).fill("E2E Müştəri"); await shop.getByLabel("Telefon nömrəsi", { exact: true }).fill("+994500005555");
   await shop.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("Bakı"); await shop.getByLabel("Çatdırılma ünvanı", { exact: true }).fill("Test küçəsi 10, mənzil 2");
   await shop.locator('input[type="checkbox"]').check();
-  await customer.route("https://wa.me/**", route => route.fulfill({ body: "WhatsApp handoff intercepted by test." }));
+  await customer.route(/^https:\/\/(wa\.me|web\.whatsapp\.com)\//, route => route.fulfill({ body: "WhatsApp handoff intercepted by test." }));
   const popupPromise = shop.waitForEvent("popup"); await shop.getByRole("button", { name: "Sifariş ver", exact: true }).click(); const popup = await popupPromise;
   await expect(shop.getByTestId("order-reference")).toBeVisible(); const reference = await shop.getByTestId("order-reference").innerText();
-  await popup.waitForURL(/https:\/\/wa.me\//); expect(decodeURIComponent(popup.url())).toContain(reference); expect(decodeURIComponent(popup.url())).toContain(code);
+  await popup.waitForURL(/https:\/\/web\.whatsapp\.com\/send/); expect(decodeURIComponent(popup.url())).toContain(reference); expect(decodeURIComponent(popup.url())).toContain(code);
   const adminOrders = await (await page.request.get("/api/admin/orders")).json(); const order = adminOrders.find((o: { reference: string }) => o.reference === reference); expect(order.status).toBe("WHATSAPP_PENDING"); expect(order.paymentStatus).toBe("UNPAID");
   await page.goto("/admin/orders");
   const orderRow = page.getByRole("row").filter({ hasText: reference });

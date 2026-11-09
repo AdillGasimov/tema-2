@@ -6,6 +6,8 @@ import { ArrowRight, CheckCircle2, MessageCircle, Minus, Plus, ShoppingBag, Tras
 import { useCart } from "./cart-provider";
 import { FreeDeliveryNote } from "./free-delivery-note";
 import { CheckoutContactFields, CheckoutFieldError } from "./checkout-contact-fields";
+import { WhatsAppOrderActions } from "./whatsapp-order-actions";
+import { whatsappHandoff } from "@/lib/whatsapp-handoff";
 import { checkoutContactErrors, checkoutContactMessages, normalizeCheckoutPhone, type CheckoutField, type CheckoutFieldErrors } from "@/lib/checkout-contact";
 import { money } from "@/lib/money";
 import { deliveryCharge, deliveryRegionList } from "@/lib/delivery";
@@ -29,7 +31,7 @@ export function CheckoutForm({ settings: s }: { settings: PublicSettings }) {
     const destinations = deliveryRegionList(s.deliveryRegions);
     return deliveryRegionList(s.deliveryFreeRegions).find(region => destinations.includes(region)) ?? "";
   });
-  const [result, setResult] = useState<{ reference: string; totalMinor: number; whatsappUrl: string } | null>(null);
+  const [result, setResult] = useState<{ reference: string; totalMinor: number; whatsappUrl: string; whatsappMessage: string } | null>(null);
   useEffect(() => { fetch("/api/referrals").then(r => r.json()).then(d => setCode(d.code ?? "")); }, []);
   const subtotal = items.reduce((n, i) => n + i.priceMinor * i.quantity, 0);
   const delivery = deliveryCharge(s, subtotal, city);
@@ -87,13 +89,14 @@ export function CheckoutForm({ settings: s }: { settings: PublicSettings }) {
         throw new Error(requestError);
       }
       if (!d || typeof d.reference !== "string" || typeof d.totalMinor !== "number" || typeof d.whatsappUrl !== "string") throw new Error(requestError);
-      setResult(d); clear(); checkoutAttempt.current = null;
+      const handoff = whatsappHandoff(d.whatsappUrl, navigator, typeof d.whatsappMessage === "string" ? d.whatsappMessage : undefined);
+      setResult({ ...d, whatsappUrl: handoff.url, whatsappMessage: handoff.message }); clear(); checkoutAttempt.current = null;
       try { sessionStorage.removeItem("checkout-attempt"); } catch { /* Storage cleanup must not hide a successful order. */ }
-      if (popup) popup.location.replace(d.whatsappUrl);
+      if (popup) popup.location.replace(handoff.url);
     } catch { popup?.close(); setError(requestError); }
     finally { setBusy(false); }
   }
-  if (result) return <div className="success-card"><CheckCircle2 size={48} strokeWidth={1} /><p className="eyebrow">SİFARİŞ SORĞUSU QEYDƏ ALINDI</p><h1>Təşəkkür edirik!</h1><p>Sifariş nömrəniz: <strong data-testid="order-reference">{result.reference}</strong></p><p>Yekun məbləğ: <strong>{money(result.totalMinor)}</strong></p><div className="notice">WhatsApp-da mesajı göndərərək sifarişi təsdiq üçün bizə çatdırın. Sifariş hələ ödənilmiş və ya tamamlanmış sayılmır.</div><a className="btn btn-dark" href={result.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={18} /> WhatsApp-da mesajı göndər</a><Link href="/products" className="text-link">Mağazaya qayıt <ArrowRight size={16} /></Link></div>;
+  if (result) return <div className="success-card"><CheckCircle2 size={48} strokeWidth={1} /><p className="eyebrow">SİFARİŞ SORĞUSU QEYDƏ ALINDI</p><h1>Təşəkkür edirik!</h1><p>Sifariş nömrəniz: <strong data-testid="order-reference">{result.reference}</strong></p><p>Yekun məbləğ: <strong>{money(result.totalMinor)}</strong></p><div className="notice">WhatsApp-da mesajı göndərərək sifarişi təsdiq üçün bizə çatdırın. Sifariş hələ ödənilmiş və ya tamamlanmış sayılmır.</div><WhatsAppOrderActions url={result.whatsappUrl} message={result.whatsappMessage} /><Link href="/products" className="text-link">Mağazaya qayıt <ArrowRight size={16} /></Link></div>;
   if (!items.length) return <div className="empty-state"><ShoppingBag size={48} /><h2>Səbətiniz boşdur.</h2><Link className="btn btn-dark" href="/products">Məhsullara bax</Link></div>;
   return <form onSubmit={submit} noValidate className="checkout-grid" onBlur={event => checkField(event.currentTarget, contactFieldName(event.target))} onChange={event => { const name = contactFieldName(event.target); if (fieldErrors[name as CheckoutField]) checkField(event.currentTarget, name); }}><div className="checkout-form"><p className="eyebrow">ƏLAQƏ VƏ ÇATDIRILMA</p><h2>Sizi tanıyaq.</h2><div className="form-grid"><CheckoutContactFields phone={phone} city={city} regions={deliveryRegionList(s.deliveryRegions)} errors={fieldErrors} onPhoneChange={changePhone} onCityChange={setCity} /><label className="field span-2">Əlavə qeyd (istəyə bağlı)<textarea name="notes" maxLength={1000} rows={2} /></label><label className="field span-2">Referal kodu (istəyə bağlı)<input aria-label="Referal kodu (istəyə bağlı)" value={code} onChange={e => setCode(e.target.value.toUpperCase())} maxLength={24} placeholder="Tərəfdaşın referal kodu" /><small>Sizi bizə tövsiyə edən şəxsin kodu varsa, daxil edin.</small></label></div><label className="checkbox-line"><input name="consent" type="checkbox" required aria-invalid={!!fieldErrors.consent} aria-describedby={fieldErrors.consent ? "checkout-consent-error" : undefined} /> <span><Link href="/privacy" target="_blank">Məxfilik siyasəti</Link> ilə tanış oldum və sifariş üçün məlumatlarımın emalına razıyam.</span></label><CheckoutFieldError name="consent" message={fieldErrors.consent} /></div><aside className="summary-card"><p className="eyebrow">SON BİR BAXIŞ</p><h2>Sifariş xülasəsi</h2><FreeDeliveryNote regions={s.deliveryFreeRegions} />{items.map(i => <div className="summary-line" key={i.variantId}><span>{i.name}<small>{i.variant} · {i.quantity} ədəd</small></span><strong>{money(i.priceMinor * i.quantity)}</strong></div>)}<div className="summary-line"><span>Çatdırılma</span><strong>{money(delivery)}</strong></div><div className="summary-total"><span>Yekun</span><strong>{money(subtotal + delivery)}</strong></div><div className="notice"><MessageCircle size={20} /><span>Onlayn kart ödənişi tələb olunmur. Sifariş və ödəniş WhatsApp ilə ayrıca təsdiqlənir.</span></div>{error && <p role="alert" className="error-message">{error}</p>}{!s.whatsapp && <p className="error-message">Sifariş qəbulu hələ aktiv deyil.</p>}<button className="btn btn-dark full" disabled={busy || !s.whatsapp}>{busy ? "Qeydə alınır…" : "Sifariş ver"}<ArrowUpRightIcon /></button><p className="form-hint">Sifarişdən sonra WhatsApp pəncərəsi açılacaq. Mesajı özünüz göndərməlisiniz.</p></aside></form>;
 }
