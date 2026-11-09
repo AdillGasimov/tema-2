@@ -1,8 +1,8 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { ServerlessPrismaPg } from "./prisma-adapter";
 import { databasePoolConfig } from "./db-config";
 const globalDb = globalThis as unknown as { prisma?: PrismaClient };
-export const db = globalDb.prisma ?? new PrismaClient({ adapter: new PrismaPg(databasePoolConfig()), log: ["error"] });
+export const db = globalDb.prisma ?? new PrismaClient({ adapter: new ServerlessPrismaPg(databasePoolConfig()), log: ["error"] });
 // Route bundles can load this module separately in the same production worker.
 // Reuse its client there too, rather than opening a fresh pool for every bundle.
 globalDb.prisma = db;

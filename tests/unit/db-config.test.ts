@@ -1,9 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { databasePoolConfig } from "../../src/lib/db-config";
+import { applicationDatabaseUrl, databasePoolConfig } from "../../src/lib/db-config";
 
 describe("serverless database connection budgets", () => {
   it("defaults to one connection per worker", () => {
     expect(databasePoolConfig({}).max).toBe(1);
+    expect(databasePoolConfig({}).allowExitOnIdle).toBe(true);
+  });
+  it.each(["postgres", "postgresql"])("uses Prisma's documented pooled %s endpoint without changing credentials or TLS", protocol => {
+    const direct = `${protocol}://user:encoded%2Fpassword@db.prisma.io:5432/postgres?sslmode=verify-full&application_name=store`;
+    const expected = direct.replace("@db.prisma.io:", "@pooled.db.prisma.io:");
+    expect(applicationDatabaseUrl(direct)).toBe(expected);
+    expect(databasePoolConfig({ DATABASE_URL: direct }).connectionString).toBe(expected);
+  });
+  it.each([
+    "postgres://user:password@pooled.db.prisma.io:5432/postgres?sslmode=require",
+    "postgresql://localhost/operator_test", "postgres://user:password@custom.example:5432/store",
+    "postgres://user:password@db.prisma.io.example:5432/store", "postgres://user:password@db.prisma.io:6432/store",
+    "prisma+postgres://accelerate.prisma-data.net/?api_key=test", undefined,
+  ])("leaves explicitly pooled or other configured endpoints unchanged", connection => {
+    expect(applicationDatabaseUrl(connection)).toBe(connection);
   });
   it("accepts an explicit operator budget and preserves the configured endpoint", () => {
     const connection = "postgresql://localhost/operator_test";

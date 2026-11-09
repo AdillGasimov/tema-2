@@ -1,5 +1,6 @@
 import type { Pool as PgPool } from "pg";
 import { databasePoolConfig } from "./db-config";
+import { manageDatabasePool } from "./database-pool";
 
 const globalRouting = globalThis as unknown as { productRouting?: { pool?: PgPool; retryAfter: number } };
 const state = globalRouting.productRouting ??= { retryAfter: 0 };
@@ -14,7 +15,8 @@ export async function productAliasTarget(slug: string): Promise<string | null> {
       const { Pool } = await import("pg");
       // Concurrent first requests can resume after this import together.
       if (!state.pool) {
-        state.pool = new Pool({ ...databasePoolConfig(), max: 1, connectionTimeoutMillis: 1200, query_timeout: 1200, statement_timeout: 1200, allowExitOnIdle: true });
+        // Avoid session-only startup settings on transaction-pooling providers.
+        state.pool = manageDatabasePool(new Pool({ ...databasePoolConfig(), max: 1, connectionTimeoutMillis: 1200, query_timeout: 1200, allowExitOnIdle: true }));
         state.pool.on("error", () => { state.retryAfter = Date.now() + 60000; });
       }
     }

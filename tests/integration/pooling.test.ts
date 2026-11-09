@@ -1,15 +1,45 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Client } from "pg";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { Client, Pool, type PoolClient } from "pg";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { randomBytes } from "node:crypto";
 import { databasePoolConfig } from "../../src/lib/db-config";
+import { manageDatabasePool } from "../../src/lib/database-pool";
+import { ServerlessPrismaPg } from "../../src/lib/prisma-adapter";
 
 let admin: Client;
 beforeAll(async () => { admin = new Client({ connectionString: process.env.DATABASE_URL }); await admin.connect(); });
 afterAll(async () => { await admin.end(); });
 
 describe("database roles with a tight connection limit", () => {
+  it("keeps a Vercel request alive for idle cleanup while leaving checked-out connections usable", async () => {
+    vi.stubEnv("VERCEL", "1"); vi.stubEnv("VERCEL_URL", "pool-test.example"); vi.stubEnv("VERCEL_REGION", "fra1");
+    const symbol = Symbol.for("@vercel/request-context"), previous = Reflect.get(globalThis, symbol);
+    const tasks: Promise<unknown>[] = [];
+    Reflect.set(globalThis, symbol, { get: () => ({ waitUntil: (task: Promise<unknown>) => tasks.push(task) }) });
+    const pool = manageDatabasePool(new Pool({ ...databasePoolConfig(), idleTimeoutMillis: 40 }));
+    let held: PoolClient | undefined;
+    try {
+      await pool.query("SELECT 1"); expect(tasks.length).toBeGreaterThan(0);
+      held = await pool.connect();
+      await Promise.all([...tasks]);
+      expect(pool.totalCount).toBe(1); expect((await held.query("SELECT 2 AS value")).rows[0].value).toBe(2);
+      held.release(); held = undefined;
+      await Promise.all(tasks);
+      expect(pool.totalCount).toBe(0);
+    } finally {
+      held?.release(); await pool.end();
+      Reflect.set(globalThis, symbol, previous); vi.unstubAllEnvs();
+    }
+  });
+  it("recreates and disposes the managed Prisma pool when a client reconnects", async () => {
+    const client = new PrismaClient({ adapter: new ServerlessPrismaPg(databasePoolConfig()), log: [] });
+    try {
+      expect(await client.$queryRaw`SELECT 1 AS value`).toEqual([{ value: 1 }]);
+      await client.$disconnect();
+      expect(await client.$queryRaw`SELECT 2 AS value`).toEqual([{ value: 2 }]);
+    } finally { await client.$disconnect(); }
+  });
   it("reproduces exhaustion with the old default and serves parallel queries within the application budget", async () => {
     const role = `pool_budget_${randomBytes(5).toString("hex")}_test`;
     const password = randomBytes(24).toString("hex");
