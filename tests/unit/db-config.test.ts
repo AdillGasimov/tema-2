@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicationDatabaseUrl, databasePoolConfig, transactionStartupWait } from "../../src/lib/db-config";
+import { applicationDatabaseUrl, databasePoolConfig, deploymentDatabaseUrl, transactionStartupWait } from "../../src/lib/db-config";
 
 describe("serverless database connection budgets", () => {
   it("keeps the runtime transaction-start budget and allows a bounded wait only in deployment children", () => {
@@ -11,6 +11,17 @@ describe("serverless database connection budgets", () => {
   it("defaults to one connection per worker", () => {
     expect(databasePoolConfig({}).max).toBe(1);
     expect(databasePoolConfig({}).allowExitOnIdle).toBe(true);
+  });
+  it("uses the original migration connection for sequential build setup while keeping request workers pooled", () => {
+    const connection = "postgresql://user:encoded%2Fpassword@db.prisma.io:5432/postgres?sslmode=verify-full";
+    const pooled = connection.replace("@db.prisma.io:", "@pooled.db.prisma.io:");
+    for (const configured of [connection, pooled]) {
+      const env = { DATABASE_URL: configured };
+      expect(databasePoolConfig({ ...env, DEPLOYMENT_DB_PREPARATION: "1" }).connectionString).toBe(connection);
+      expect(databasePoolConfig(env).connectionString).toBe(pooled);
+      expect(env.DATABASE_URL).toBe(configured);
+    }
+    for (const other of ["postgresql://localhost/store_test", "postgresql://user:password@custom.example/store", "postgresql://user:password@pooled.db.prisma.io:6432/store", undefined]) expect(deploymentDatabaseUrl(other)).toBe(other);
   });
   it.each(["postgres", "postgresql"])("uses Prisma's documented pooled %s endpoint without changing credentials or TLS", protocol => {
     const direct = `${protocol}://user:encoded%2Fpassword@db.prisma.io:5432/postgres?sslmode=verify-full&application_name=store`;

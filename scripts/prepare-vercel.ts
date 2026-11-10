@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { spawnSync } from "node:child_process";
 import { shouldPrepareDeploymentDatabase } from "../src/lib/deployment";
+import { deploymentDatabaseUrl } from "../src/lib/db-config";
 
 if (!shouldPrepareDeploymentDatabase(process.env)) {
   console.log("Database preparation skipped outside the Vercel production target or by SKIP_DEPLOY_DB_SETUP.");
@@ -28,7 +29,7 @@ for (const [script, args] of [
 ] as const) {
   console.log(`Deployment database step: ${script}`);
   const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], {
-    env: { ...process.env, DEPLOYMENT_DB_PREPARATION: "1" }, stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: deploymentDatabaseUrl(connection), DEPLOYMENT_DB_PREPARATION: "1" }, stdio: "inherit",
   });
   if (result.error) {
     console.error("Could not start the deployment database preparation command.");
