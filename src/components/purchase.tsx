@@ -1,7 +1,5 @@
 "use client";
-import { publicImageSrc } from "@/lib/public-image";
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalog";
@@ -9,9 +7,9 @@ import { money } from "@/lib/money";
 import { availability } from "@/lib/availability";
 import { useCart } from "./cart-provider";
 import { FreeDeliveryNote } from "./free-delivery-note";
+import { ProductPhotos } from "./product-photos";
 export function Gallery({ images, name }: { images: PublicProduct["images"]; name: string }) {
-  const [index, setIndex] = useState(0);
-  return <div><div className="detail-image">{images[index] ? <Image src={publicImageSrc(images[index].key)} alt={images[index].alt} fill sizes="(max-width: 768px) 100vw, 50vw" priority /> : <span>Şəkil əlavə ediləcək</span>}</div><div className="thumbnails">{images.map((i, n) => <button key={i.id} className={n === index ? "selected" : ""} aria-label={`${name} şəkil ${n + 1}`} onClick={() => setIndex(n)}><Image src={publicImageSrc(i.key)} width={72} height={72} alt={i.alt} /></button>)}</div></div>;
+  return <ProductPhotos images={images} name={name} mode="detail" />;
 }
 export function Purchase({ product: p, deliveryFreeRegions }: { product: PublicProduct; deliveryFreeRegions: string }) {
   const [variantId, setVariantId] = useState(p.variants.find(v => v.stock > v.reserved)?.id ?? p.variants[0]?.id);

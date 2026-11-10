@@ -46,10 +46,10 @@ test.beforeAll(async ({ browser }) => {
   unverified = await create("unverified", 4, [10000]);
   expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...update(unverified), variants: update(unverified).variants.map(v => ({ ...v, stockVerified: false })) } })).ok()).toBe(true);
   unverified.variants[0].stockVerified = false;
-  for (const color of ["green", "blue"]) {
+  for (const [color, product] of [["green", multi], ["blue", multi], ["white", single]] as const) {
     const upload = await admin.request.post("/api/admin/upload", { headers: origin, multipart: { file: { name: "test.png", mimeType: "image/png", buffer: await sharp({ create: { width: 30, height: 30, channels: 3, background: color } }).png().toBuffer() } } });
-    expect(upload.ok()).toBe(true); const photo = await upload.json(); secondImage = photo.key;
-    expect((await admin.request.post("/api/admin/images", { headers: origin, data: { action: "attach", productId: multi.id, key: photo.key, alt: `${multi.name} şəkli` } })).ok()).toBe(true);
+    expect(upload.ok()).toBe(true); const photo = await upload.json(); if (product.id === multi.id) secondImage = photo.key;
+    expect((await admin.request.post("/api/admin/images", { headers: origin, data: { action: "attach", productId: product.id, key: photo.key, alt: `${product.name} şəkli` } })).ok()).toBe(true);
   }
   for (let n = 0; n < 14; n++) { const p = await create(`filter-${String(n).padStart(2, "0")}`, 3, n === 13 ? [100, 900] : [100 + n * 10], filterCategory.id); filterNames.push(p.name); }
 });
@@ -83,6 +83,80 @@ test("public policies, delivery, footer, category navigation and SEO are complet
   await page.goto(`/products?category=${category.slug}`); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ətirləndiricilər"); expect(await page.title()).toContain("Ətirləndiricilər"); expect(titles.has(await page.title())).toBe(false);
 });
 
+test("product photo arrows, dots, keyboard and image links work without preloading every photo", async ({ page }) => {
+  const errors: string[] = [], extraPhotoRequests: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.pathname === "/_next/image" && url.searchParams.get("url") === `/api/media/${secondImage}?public=1` && Number(url.searchParams.get("w")) > 128) extraPhotoRequests.push(url.href);
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`/products?category=${category.slug}`);
+  const card = page.locator(".product-card").filter({ has: page.getByRole("heading", { name: multi.name, exact: true }) });
+  await expect(card).toBeVisible(); await expect(card.locator(".product-photo-track img")).toHaveCount(1);
+  await page.waitForLoadState("networkidle"); expect(extraPhotoRequests).toHaveLength(0);
+  const currentImage = card.locator('.product-photo-slide[aria-hidden="false"] img');
+  await expect(card.getByRole("button", { name: "Əvvəlki şəkil", exact: true })).toBeDisabled();
+  await card.getByRole("button", { name: "Növbəti şəkil", exact: true }).click();
+  await expect(card.locator(".photo-count")).toContainText("2 / 2");
+  await expectOptimizedSource(currentImage, `/api/media/${secondImage}?public=1`);
+  await expect.poll(() => extraPhotoRequests.length).toBeGreaterThan(0);
+  await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`));
+  await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeDisabled();
+  await card.getByRole("button", { name: "Şəkil 1", exact: true }).click(); await expect(card.locator(".photo-count")).toContainText("1 / 2");
+  const track = card.locator(".product-photo-track"); await track.focus(); await track.press("End");
+  await expect(card.locator(".photo-count")).toContainText("2 / 2");
+  await track.press("Home"); await expect(card.locator(".photo-count")).toContainText("1 / 2");
+  await track.press("ArrowRight"); await expect(card.locator(".photo-count")).toContainText("2 / 2");
+  await expect(card.locator("a button")).toHaveCount(0);
+  await card.locator('.product-photo-slide[aria-hidden="false"]').click(); await expect(page).toHaveURL(`/products/${multi.slug}`);
+  const gallery = page.locator(".product-gallery-detail");
+  await gallery.getByRole("button", { name: "Növbəti şəkil", exact: true }).click();
+  await expect(gallery.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true })).toHaveAttribute("aria-current", "true");
+  await expectOptimizedSource(gallery.locator('.product-photo-slide[aria-hidden="false"] img'), `/api/media/${secondImage}?public=1`);
+  await page.goto(`/products/${single.slug}`); await expect(page.locator(".product-gallery-detail .photo-arrow, .product-gallery-detail .photo-count")).toHaveCount(0);
+  await page.goto(`/products/${sold.slug}`); await expect(page.locator(".detail-image")).toContainText("Şəkil əlavə ediləcək");
+  expect(errors).toEqual([]);
+});
+
+test("native mobile photo swipes keep links, vertical page scrolling and gallery thumbnails usable", async ({ browser }) => {
+  const context = await browser.newContext({ baseURL: "http://localhost:3100", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  try {
+    const page = await context.newPage(), session = await context.newCDPSession(page), errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    async function swipe(target: Locator, horizontal: boolean) {
+      await target.scrollIntoViewIfNeeded(); const box = (await target.boundingBox())!;
+      const start = { x: box.x + box.width * (horizontal ? .8 : .5), y: box.y + box.height * .65 };
+      await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+      for (let step = 1; step <= 8; step++) {
+        await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: start.x - (horizontal ? box.width * .6 * step / 8 : 0), y: start.y - (horizontal ? 0 : Math.min(120, box.height * .5) * step / 8) }] });
+        await page.waitForTimeout(20);
+      }
+      await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    }
+    await page.goto(`/products?category=${category.slug}`);
+    const card = page.locator(".product-card").filter({ has: page.getByRole("heading", { name: multi.name, exact: true }) });
+    await card.scrollIntoViewIfNeeded(); const previous = (await card.getByRole("button", { name: "Əvvəlki şəkil", exact: true }).boundingBox())!;
+    await page.touchscreen.tap(previous.x + previous.width / 2, previous.y + previous.height / 2);
+    await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`)); await expect(card.locator(".photo-count")).toContainText("1 / 2");
+    await swipe(card.locator(".product-photo-track"), true); await expect(card.locator(".photo-count")).toContainText("2 / 2");
+    await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`));
+    await card.scrollIntoViewIfNeeded(); const before = await page.evaluate(() => scrollY);
+    await swipe(card.locator(".product-photo-track"), false); await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before);
+    await expect(card.locator(".photo-count")).toContainText("2 / 2");
+    await card.locator('.product-photo-slide[aria-hidden="false"]').tap(); await expect(page).toHaveURL(`/products/${multi.slug}`);
+    const gallery = page.locator(".product-gallery-detail"); await swipe(gallery.locator(".product-photo-track"), true);
+    await expect(gallery.locator(".photo-count")).toContainText("2 / 2");
+    await expectOptimizedSource(gallery.locator('.product-photo-slide[aria-hidden="false"] img'), `/api/media/${secondImage}?public=1`);
+    await expect(gallery.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true })).toHaveAttribute("aria-current", "true");
+    await gallery.getByRole("button", { name: `${multi.name} şəkil 1`, exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText("1 / 2");
+    await gallery.getByRole("button", { name: "Növbəti şəkil", exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText("2 / 2");
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect.poll(() => gallery.locator(".product-photo-track").evaluate(element => element.scrollLeft / element.clientWidth)).toBeCloseTo(1, 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); expect(errors).toEqual([]);
+  } finally { await context.close(); }
+});
+
 test("product options, stock limits, gallery, device cart, buy-now and WhatsApp checkout work", async ({ page, browser }) => {
   await page.goto(`/products/${sold.slug}`); await expect(page.locator('.purchase select')).toHaveCount(0); await expect(page.locator('.purchase .out-stock')).toContainText("Stokda yoxdur");
   await expect(page.getByRole("button", { name: "Artır", exact: true })).toBeDisabled(); await expect(page.getByRole("button", { name: "Səbətə əlavə et", exact: true })).toBeDisabled(); await expect(page.getByRole("button", { name: "İndi sifariş et", exact: true })).toBeDisabled();
@@ -96,7 +170,7 @@ test("product options, stock limits, gallery, device cart, buy-now and WhatsApp 
   await page.getByLabel("Referal kodu (istəyə bağlı)", { exact: true }).fill(fixture().foreignCode); await page.getByRole("button", { name: "Kodu tətbiq et" }).click(); await expect(page.locator('.summary-card [role="status"]')).toContainText(fixture().foreignCode);
   await page.getByRole("button", { name: `${single.name} sil`, exact: true }).click(); await expect(page.getByRole("heading", { name: "Səbətiniz hələ boşdur.", exact: true })).toBeVisible();
   await page.goto(`/products/${multi.slug}`); await expect(page.getByLabel("Variant", { exact: true })).toBeVisible(); await page.getByRole("button", { name: "Artır", exact: true }).click(); await page.getByLabel("Variant", { exact: true }).selectOption(multi.variants[1].id); await expect(page.locator('.purchase .quantity-control > span')).toHaveText("1"); await expect(page.locator('.detail-price')).toContainText("20,00");
-  await page.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true }).click(); await expectOptimizedSource(page.locator('.detail-image img'), `/api/media/${secondImage}?public=1`);
+  await page.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true }).click(); await expectOptimizedSource(page.locator('.detail-image .product-photo-slide[aria-hidden="false"] img'), `/api/media/${secondImage}?public=1`);
   await page.getByRole("button", { name: "İndi sifariş et", exact: true }).click(); await expect(page).toHaveURL(/\/checkout$/); await expect(page.locator(".summary-card .free-delivery-note")).toHaveText(freeDelivery); await expect(page.locator('.cart-storage-note')).toBeVisible();
   await expect(page.getByLabel("Şəhər və ya bölgə", { exact: true })).toHaveValue("28 May (Bakı)"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("0,00");
   await page.getByLabel("Şəhər və ya bölgə", { exact: true }).selectOption("Bakı"); await expect(page.locator('.summary-line').filter({ hasText: "Çatdırılma" })).toContainText("5,00");

@@ -71,6 +71,33 @@
 }
 @media(prefers-reduced-motion:reduce){.product-card,.product-card .product-image-frame img{transition:none}.product-card:hover .product-image-frame img{transform:none}}
 
+/* Native photo scrolling: vertical page gestures and image links stay usable. */
+.product-gallery{min-width:0}
+.product-photos{position:relative;overflow:hidden;isolation:isolate}
+.product-photo-track{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;touch-action:pan-x pan-y pinch-zoom}
+.product-photo-track::-webkit-scrollbar{display:none}
+.product-photo-track:focus-visible{outline:3px solid #76a145;outline-offset:-4px}
+.product-photo-slide{position:relative;flex:0 0 100%;min-width:0;height:100%;scroll-snap-align:start;scroll-snap-stop:always;user-select:none;-webkit-user-drag:none}
+.product-photo-slide:focus-visible{outline:3px solid #76a145;outline-offset:-4px}
+.product-photo-frame{position:absolute;inset:0}
+.product-photo-frame img{object-fit:contain}
+.photo-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid #e1e6dc;border-radius:50%;background:#fffffff0;box-shadow:0 2px 8px #15221a0d}
+.photo-arrow:hover{background:var(--brand);border-color:transparent}
+.photo-previous{left:8px}.photo-next{right:8px}
+.photo-arrow:disabled{opacity:.35;pointer-events:auto}
+.photo-count{position:absolute;right:12px;top:12px;padding:3px 7px;border-radius:5px;background:#ffffffeb;border:1px solid #e5e9e1;font-size:10px;line-height:1.5;color:#4d5c43;font-variant-numeric:tabular-nums;pointer-events:none}
+.photo-dots{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);display:flex;padding:0 3px;border-radius:20px;background:#ffffffed}
+.photo-dots button{display:grid;place-items:center;min-width:24px;min-height:24px;padding:0;border-radius:50%}
+.photo-dots button>span{width:5px;height:5px;border-radius:50%;background:#b4bfaa}
+.photo-dots button[aria-current="true"]>span{width:7px;height:7px;background:var(--ink)}
+.product-gallery-detail .photo-arrow{width:44px;height:44px}
+.product-gallery-detail .photo-count{top:auto;bottom:14px;right:14px;font-size:12px}
+.product-gallery-detail .thumbnails{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding:3px 0;scrollbar-width:thin}
+.product-gallery-detail .thumbnails button{flex-shrink:0;min-width:82px}
+.product-gallery-detail .thumbnails button:focus-visible{outline-offset:-3px}
+@media(hover:hover) and (pointer:fine){.product-card .photo-arrow{opacity:0}.product-card:hover .photo-arrow,.product-card:focus-within .photo-arrow{opacity:1}.product-card:hover .photo-arrow:disabled,.product-card:focus-within .photo-arrow:disabled{opacity:.35}}
+@media(max-width:600px){.product-card .photo-arrow{width:30px;height:30px}.product-card .photo-arrow svg{width:16px;height:16px}.product-card .photo-previous{left:5px}.product-card .photo-next{right:5px}.product-card .photo-count{top:8px;right:8px;font-size:9px}.photo-dots{bottom:4px}}
+
 /* The full logo is used on light surfaces; dark surfaces use its symbol and name. */
 .brand .brand-logo{display:block;width:220px;height:68px;max-width:100%;object-fit:contain}
 .brand .brand-symbol{display:block;width:46px;height:46px;flex-shrink:0;object-fit:contain}
