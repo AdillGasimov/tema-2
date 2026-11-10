@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { ServerlessPrismaPg } from "./prisma-adapter";
-import { databasePoolConfig } from "./db-config";
+import { databasePoolConfig, transactionStartupWait } from "./db-config";
 const globalDb = globalThis as unknown as { prisma?: PrismaClient };
 export const db = globalDb.prisma ?? new PrismaClient({ adapter: new ServerlessPrismaPg(databasePoolConfig()), log: ["error"] });
 // Route bundles can load this module separately in the same production worker.
@@ -14,7 +14,7 @@ function serializationConflict(error: unknown, depth = 0): boolean {
 }
 export async function transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 5; attempt++) {
-    try { return await db.$transaction(fn, { isolationLevel: "Serializable", timeout: 20000 }); }
+    try { return await db.$transaction(fn, { isolationLevel: "Serializable", maxWait: transactionStartupWait(), timeout: 20000 }); }
     catch (error) {
       if (!serializationConflict(error) || attempt === 4) throw error;
       await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1) + Math.floor(Math.random() * 25)));

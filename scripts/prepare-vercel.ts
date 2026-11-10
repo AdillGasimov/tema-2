@@ -27,7 +27,9 @@ for (const [script, args] of [
   ["scripts/apply-storefront-availability.ts", []],
 ] as const) {
   console.log(`Deployment database step: ${script}`);
-  const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], { env: process.env, stdio: "inherit" });
+  const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], {
+    env: { ...process.env, DEPLOYMENT_DB_PREPARATION: "1" }, stdio: "inherit",
+  });
   if (result.error) {
     console.error("Could not start the deployment database preparation command.");
     process.exit(1);

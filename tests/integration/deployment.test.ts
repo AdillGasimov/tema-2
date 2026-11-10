@@ -95,9 +95,13 @@ describe("Vercel initialization against real fresh PostgreSQL databases", () => 
     expect(account.password === chosen.ADMIN_PASSWORD).toBe(false);
     expect(await verifyPassword({ hash: account.password, password: chosen.ADMIN_PASSWORD })).toBe(true);
     expect((await client.query('SELECT "userId" FROM "AdminUser"')).rows).toEqual([{ userId: account.id }]);
+    const redeployed = prepare(url, "production", credentials());
+    expect(redeployed.status, `${redeployed.stdout}\n${redeployed.stderr}`).toBe(0);
     for (const variables of [credentials(), { ADMIN_EMAIL: chosen.ADMIN_EMAIL, ADMIN_PASSWORD: "" }, {}]) {
-      const repeated = prepare(url, "production", variables);
-      expect(repeated.status, `${repeated.stdout}\n${repeated.stderr}`).toBe(0);
+      // Exercise each credential case directly after one full redeployment,
+      // rather than repeating all nine migration/content steps for every case.
+      const repeated = await bootstrap(url, variables);
+      expect(repeated.status, repeated.output).toBe(0);
       const preserved = (await client.query('SELECT u.id, a.password FROM "User" u JOIN "Account" a ON a."userId" = u.id')).rows;
       expect(preserved.length).toBe(1); expect(preserved[0].id).toBe(account.id);
       expect(preserved[0].password === account.password).toBe(true);

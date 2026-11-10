@@ -19,6 +19,7 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const dragged = useRef(false);
   const selected = useRef(0);
+  const trackWidth = useRef(0);
   const [index, setIndex] = useState(0);
   // Do not request every full-size gallery photo just because a card is visible.
   const [loaded, setLoaded] = useState(() => new Set([0]));
@@ -27,11 +28,11 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   useEffect(() => {
     const element = track.current;
     if (!element) return;
-    let width = element.clientWidth;
+    trackWidth.current = element.clientWidth;
     const observer = new ResizeObserver(() => {
-      if (element.clientWidth === width) return;
-      width = element.clientWidth;
-      element.scrollTo({ left: selected.current * width, behavior: "instant" });
+      if (element.clientWidth === trackWidth.current) return;
+      trackWidth.current = element.clientWidth;
+      element.scrollTo({ left: selected.current * element.clientWidth, behavior: "instant" });
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -44,6 +45,12 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   function scrolled() {
     const element = track.current;
     if (!element?.clientWidth) return;
+    if (trackWidth.current && trackWidth.current !== element.clientWidth) {
+      trackWidth.current = element.clientWidth;
+      element.scrollTo({ left: selected.current * element.clientWidth, behavior: "instant" });
+      return;
+    }
+    trackWidth.current = element.clientWidth;
     const position = element.scrollLeft / element.clientWidth;
     const next = Math.max(0, Math.min(images.length - 1, Math.round(position)));
     selected.current = next;
@@ -54,6 +61,7 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
     const element = track.current;
     if (!element || next < 0 || next >= images.length) return;
     load(next);
+    element.scrollTo({ left: element.scrollLeft, behavior: "instant" });
     selected.current = next;
     const instant = Math.abs(next - index) > 1 || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     element.scrollTo({ left: next * element.clientWidth, behavior: instant ? "instant" : "smooth" });

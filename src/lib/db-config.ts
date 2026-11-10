@@ -1,5 +1,10 @@
 import type { PoolConfig } from "pg";
 
+export function transactionStartupWait(env: Record<string, string | undefined> = process.env) {
+  // Only the trusted deployment runner sets this in its short-lived children.
+  return env.DEPLOYMENT_DB_PREPARATION === "1" ? 15000 : 2000;
+}
+
 export function applicationDatabaseUrl(connection: string | undefined) {
   if (!connection) return connection;
   try {

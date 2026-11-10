@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { applicationDatabaseUrl, databasePoolConfig } from "../../src/lib/db-config";
+import { applicationDatabaseUrl, databasePoolConfig, transactionStartupWait } from "../../src/lib/db-config";
 
 describe("serverless database connection budgets", () => {
+  it("keeps the runtime transaction-start budget and allows a bounded wait only in deployment children", () => {
+    expect(transactionStartupWait({})).toBe(2000);
+    expect(transactionStartupWait({ VERCEL: "1", VERCEL_ENV: "production" })).toBe(2000);
+    expect(transactionStartupWait({ DEPLOYMENT_DB_PREPARATION: "true" })).toBe(2000);
+    expect(transactionStartupWait({ DEPLOYMENT_DB_PREPARATION: "1" })).toBe(15000);
+  });
   it("defaults to one connection per worker", () => {
     expect(databasePoolConfig({}).max).toBe(1);
     expect(databasePoolConfig({}).allowExitOnIdle).toBe(true);

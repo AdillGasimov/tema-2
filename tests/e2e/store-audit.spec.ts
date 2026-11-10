@@ -25,6 +25,7 @@ let admin: Page, initial: { settings: Record<string, unknown>; rule: unknown };
 let single: ProductInput, multi: ProductInput, sold: ProductInput, redirectProduct: ProductInput, unverified: ProductInput;
 let category: { id: string; slug: string }, filterCategory: { id: string; slug: string };
 let secondImage: string;
+const galleryPhotoCount = 12;
 const suffix = randomUUID().slice(0, 7), filterNames: string[] = [];
 const cleanSettings = (s: Record<string, unknown>) => Object.fromEntries(Object.entries(s).filter(([k]) => !["id", "updatedAt"].includes(k)));
 test.beforeAll(async ({ browser }) => {
@@ -46,9 +47,10 @@ test.beforeAll(async ({ browser }) => {
   unverified = await create("unverified", 4, [10000]);
   expect((await admin.request.post("/api/admin/products", { headers: origin, data: { ...update(unverified), variants: update(unverified).variants.map(v => ({ ...v, stockVerified: false })) } })).ok()).toBe(true);
   unverified.variants[0].stockVerified = false;
-  for (const [color, product] of [["green", multi], ["blue", multi], ["white", single]] as const) {
+  const photos: [string, ProductInput][] = [["green", multi], ["blue", multi], ...Array.from({ length: galleryPhotoCount - 2 }, () => ["orange", multi] as [string, ProductInput]), ["white", single]];
+  for (const [color, product] of photos) {
     const upload = await admin.request.post("/api/admin/upload", { headers: origin, multipart: { file: { name: "test.png", mimeType: "image/png", buffer: await sharp({ create: { width: 30, height: 30, channels: 3, background: color } }).png().toBuffer() } } });
-    expect(upload.ok()).toBe(true); const photo = await upload.json(); if (product.id === multi.id) secondImage = photo.key;
+    expect(upload.ok()).toBe(true); const photo = await upload.json(); if (product.id === multi.id && color === "blue") secondImage = photo.key;
     expect((await admin.request.post("/api/admin/images", { headers: origin, data: { action: "attach", productId: product.id, key: photo.key, alt: `${product.name} şəkli` } })).ok()).toBe(true);
   }
   for (let n = 0; n < 14; n++) { const p = await create(`filter-${String(n).padStart(2, "0")}`, 3, n === 13 ? [100, 900] : [100 + n * 10], filterCategory.id); filterNames.push(p.name); }
@@ -106,16 +108,17 @@ test("product photo arrows, dots, keyboard and image links work without preloadi
   const currentImage = card.locator('.product-photo-slide[aria-hidden="false"] img');
   await expect(card.getByRole("button", { name: "Əvvəlki şəkil", exact: true })).toBeDisabled();
   await card.getByRole("button", { name: "Növbəti şəkil", exact: true }).click();
-  await expect(card.locator(".photo-count")).toContainText("2 / 2");
+  await expect(card.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
   await expectOptimizedSource(currentImage, `/api/media/${secondImage}?public=1`);
   await expect.poll(() => extraPhotoRequests.length).toBeGreaterThan(0);
   await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`));
-  await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeDisabled();
-  await card.getByRole("button", { name: "Şəkil 1", exact: true }).click(); await expect(card.locator(".photo-count")).toContainText("1 / 2");
+  await expect(card.locator(".photo-dots button")).toHaveCount(5);
+  await card.getByRole("button", { name: "Şəkil 1", exact: true }).click(); await expect(card.locator(".photo-count")).toContainText(`1 / ${galleryPhotoCount}`);
   const track = card.locator(".product-photo-track"); await track.focus(); await track.press("End");
-  await expect(card.locator(".photo-count")).toContainText("2 / 2");
-  await track.press("Home"); await expect(card.locator(".photo-count")).toContainText("1 / 2");
-  await track.press("ArrowRight"); await expect(card.locator(".photo-count")).toContainText("2 / 2");
+  await expect(card.locator(".photo-count")).toContainText(`${galleryPhotoCount} / ${galleryPhotoCount}`);
+  await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeDisabled();
+  await track.press("Home"); await expect(card.locator(".photo-count")).toContainText(`1 / ${galleryPhotoCount}`);
+  await track.press("ArrowRight"); await expect(card.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
   await expect(card.locator("a button")).toHaveCount(0);
   await card.locator('.product-photo-slide[aria-hidden="false"]').click(); await expect(page).toHaveURL(`/products/${multi.slug}`);
   const gallery = page.locator(".product-gallery-detail");
@@ -147,21 +150,25 @@ test("native mobile photo swipes keep links, vertical page scrolling and gallery
     await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeEnabled();
     await card.scrollIntoViewIfNeeded(); const previous = (await card.getByRole("button", { name: "Əvvəlki şəkil", exact: true }).boundingBox())!;
     await page.touchscreen.tap(previous.x + previous.width / 2, previous.y + previous.height / 2);
-    await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`)); await expect(card.locator(".photo-count")).toContainText("1 / 2");
-    await swipe(card.locator(".product-photo-track"), true); await expect(card.locator(".photo-count")).toContainText("2 / 2");
+    await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`)); await expect(card.locator(".photo-count")).toContainText(`1 / ${galleryPhotoCount}`);
+    await swipe(card.locator(".product-photo-track"), true); await expect(card.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
     await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`));
     await card.scrollIntoViewIfNeeded(); const before = await page.evaluate(() => scrollY);
     await swipe(card.locator(".product-photo-track"), false); await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before);
-    await expect(card.locator(".photo-count")).toContainText("2 / 2");
+    await expect(card.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
     await card.locator('.product-photo-slide[aria-hidden="false"]').tap(); await expect(page).toHaveURL(`/products/${multi.slug}`);
     const gallery = page.locator(".product-gallery-detail"); await expect(gallery.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeEnabled(); await swipe(gallery.locator(".product-photo-track"), true);
-    await expect(gallery.locator(".photo-count")).toContainText("2 / 2");
+    await expect(gallery.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
     await expectOptimizedSource(gallery.locator('.product-photo-slide[aria-hidden="false"] img'), `/api/media/${secondImage}?public=1`);
     await expect(gallery.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true })).toHaveAttribute("aria-current", "true");
-    await gallery.getByRole("button", { name: `${multi.name} şəkil 1`, exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText("1 / 2");
-    await gallery.getByRole("button", { name: "Növbəti şəkil", exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText("2 / 2");
+    await gallery.getByRole("button", { name: `${multi.name} şəkil 1`, exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText(`1 / ${galleryPhotoCount}`);
+    await gallery.getByRole("button", { name: "Növbəti şəkil", exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
+    await gallery.getByRole("button", { name: `${multi.name} şəkil ${galleryPhotoCount}`, exact: true }).tap();
+    await expect(gallery.locator(".photo-count")).toContainText(`${galleryPhotoCount} / ${galleryPhotoCount}`);
     await page.setViewportSize({ width: 844, height: 390 });
-    await expect.poll(() => gallery.locator(".product-photo-track").evaluate(element => element.scrollLeft / element.clientWidth)).toBeCloseTo(1, 1);
+    await expect.poll(() => gallery.locator(".product-photo-track").evaluate(element => element.scrollLeft / element.clientWidth)).toBeCloseTo(galleryPhotoCount - 1, 1);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(() => gallery.locator(".product-photo-track").evaluate(element => element.scrollLeft / element.clientWidth)).toBeCloseTo(galleryPhotoCount - 1, 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); expect(errors).toEqual([]);
   } finally { await context.close(); }
 });
