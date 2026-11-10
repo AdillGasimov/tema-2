@@ -76,6 +76,7 @@
 .product-photos{position:relative;overflow:hidden;isolation:isolate}
 .product-photo-track{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;touch-action:pan-x pan-y pinch-zoom}
 .product-photo-track::-webkit-scrollbar{display:none}
+.product-photo-track[data-ready="false"]{overflow-x:hidden}
 .product-photo-track:focus-visible{outline:3px solid #76a145;outline-offset:-4px}
 .product-photo-slide{position:relative;flex:0 0 100%;min-width:0;height:100%;scroll-snap-align:start;scroll-snap-stop:always;user-select:none;-webkit-user-drag:none}
 .product-photo-slide:focus-visible{outline:3px solid #76a145;outline-offset:-4px}

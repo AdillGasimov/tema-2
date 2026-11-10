@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalog";
@@ -9,8 +9,12 @@ import { StoreLink } from "./store-link";
 
 type Photo = Pick<PublicProduct["images"][number], "id" | "key" | "alt">;
 type Props = { images: Photo[]; name: string; href?: string; mode: "card" | "detail"; discounted?: boolean };
+const subscribeToReady = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 
 export function ProductPhotos({ images, name, href, mode, discounted = false }: Props) {
+  const ready = useSyncExternalStore(subscribeToReady, clientReady, serverReady);
   const track = useRef<HTMLDivElement>(null);
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const dragged = useRef(false);
@@ -65,9 +69,9 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   }
 
   const dotStart = Math.max(0, Math.min(index - 2, images.length - 5));
-  return <div className={`product-gallery product-gallery-${mode}`} role="group" aria-label={`${name} — məhsul şəkilləri`} aria-roledescription={multiple ? "karusel" : undefined}>
+  return <div className={`product-gallery product-gallery-${mode}`} role="group" aria-label={`${name} — məhsul şəkilləri`} aria-roledescription={multiple ? "karusel" : undefined} aria-busy={!ready}>
     <div className={`${mode === "card" ? "product-visual" : "detail-image"} product-photos`}>
-      {images.length ? <div className="product-photo-track" ref={track} onScroll={scrolled} onKeyDown={keyDown} tabIndex={multiple ? 0 : undefined} role="group" aria-label={multiple ? "Şəkilləri ox düymələri ilə dəyişin" : "Məhsul şəkli"}
+      {images.length ? <div className="product-photo-track" ref={track} data-ready={ready} onScroll={scrolled} onKeyDown={keyDown} tabIndex={multiple && ready ? 0 : undefined} role="group" aria-label={multiple ? "Şəkilləri ox düymələri ilə dəyişin" : "Məhsul şəkli"}
         onPointerDown={event => { pointer.current = { x: event.clientX, y: event.clientY }; dragged.current = false; }}
         onPointerMove={event => { if (pointer.current && (Math.abs(event.clientX - pointer.current.x) > 8 || Math.abs(event.clientY - pointer.current.y) > 8)) dragged.current = true; }}
         onPointerCancel={() => { if (pointer.current) dragged.current = true; pointer.current = null; }}
@@ -82,15 +86,15 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
       </div> : <span>Şəkil əlavə ediləcək</span>}
       {mode === "card" && discounted && <span className="product-tag">Endirim</span>}
       {multiple && <>
-        <button type="button" className="photo-arrow photo-previous" onClick={() => select(index - 1)} disabled={index === 0} aria-label="Əvvəlki şəkil"><ChevronLeft size={20} /></button>
-        <button type="button" className="photo-arrow photo-next" onClick={() => select(index + 1)} disabled={index === images.length - 1} aria-label="Növbəti şəkil"><ChevronRight size={20} /></button>
+        <button type="button" className="photo-arrow photo-previous" onClick={() => select(index - 1)} disabled={!ready || index === 0} aria-label="Əvvəlki şəkil"><ChevronLeft size={20} /></button>
+        <button type="button" className="photo-arrow photo-next" onClick={() => select(index + 1)} disabled={!ready || index === images.length - 1} aria-label="Növbəti şəkil"><ChevronRight size={20} /></button>
         <span className="photo-count" role="status" aria-live="polite" aria-atomic="true"><span className="sr-only">Şəkil </span>{index + 1} / {images.length}</span>
         {mode === "card" && <div className="photo-dots" aria-label="Şəkil seçin">{Array.from({ length: Math.min(5, images.length) }, (_, offset) => {
           const n = dotStart + offset;
-          return <button type="button" key={n} onClick={() => select(n)} aria-label={`Şəkil ${n + 1}`} aria-current={n === index ? "true" : undefined}><span /></button>;
+          return <button type="button" key={n} disabled={!ready} onClick={() => select(n)} aria-label={`Şəkil ${n + 1}`} aria-current={n === index ? "true" : undefined}><span /></button>;
         })}</div>}
       </>}
     </div>
-    {mode === "detail" && multiple && <div className="thumbnails">{images.map((photo, n) => <button type="button" key={photo.id} className={n === index ? "selected" : ""} aria-label={`${name} şəkil ${n + 1}`} aria-current={n === index ? "true" : undefined} onClick={() => select(n)}><Image src={publicImageSrc(photo.key)} width={72} height={72} alt={photo.alt || name} draggable={false} /></button>)}</div>}
+    {mode === "detail" && multiple && <div className="thumbnails">{images.map((photo, n) => <button type="button" key={photo.id} disabled={!ready} className={n === index ? "selected" : ""} aria-label={`${name} şəkil ${n + 1}`} aria-current={n === index ? "true" : undefined} onClick={() => select(n)}><Image src={publicImageSrc(photo.key)} width={72} height={72} alt={photo.alt || name} draggable={false} /></button>)}</div>}
   </div>;
 }

@@ -91,8 +91,16 @@ test("product photo arrows, dots, keyboard and image links work without preloadi
     if (url.pathname === "/_next/image" && url.searchParams.get("url") === `/api/media/${secondImage}?public=1` && Number(url.searchParams.get("w")) > 128) extraPhotoRequests.push(url.href);
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(`/products?category=${category.slug}`);
   const card = page.locator(".product-card").filter({ has: page.getByRole("heading", { name: multi.name, exact: true }) });
+  let release!: () => void;
+  const scriptsReady = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/_next/static/**/*.js", async route => { await scriptsReady; await route.continue(); });
+  try {
+    await page.goto(`/products?category=${category.slug}`, { waitUntil: "commit" });
+    await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeDisabled();
+    await expect(card.locator(".product-gallery")).toHaveAttribute("aria-busy", "true");
+  } finally { release(); }
+  await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeEnabled();
   await expect(card).toBeVisible(); await expect(card.locator(".product-photo-track img")).toHaveCount(1);
   await page.waitForLoadState("networkidle"); expect(extraPhotoRequests).toHaveLength(0);
   const currentImage = card.locator('.product-photo-slide[aria-hidden="false"] img');
@@ -136,6 +144,7 @@ test("native mobile photo swipes keep links, vertical page scrolling and gallery
     }
     await page.goto(`/products?category=${category.slug}`);
     const card = page.locator(".product-card").filter({ has: page.getByRole("heading", { name: multi.name, exact: true }) });
+    await expect(card.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeEnabled();
     await card.scrollIntoViewIfNeeded(); const previous = (await card.getByRole("button", { name: "Əvvəlki şəkil", exact: true }).boundingBox())!;
     await page.touchscreen.tap(previous.x + previous.width / 2, previous.y + previous.height / 2);
     await expect(page).toHaveURL(new RegExp(`/products\\?category=${category.slug}$`)); await expect(card.locator(".photo-count")).toContainText("1 / 2");
@@ -145,7 +154,7 @@ test("native mobile photo swipes keep links, vertical page scrolling and gallery
     await swipe(card.locator(".product-photo-track"), false); await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before);
     await expect(card.locator(".photo-count")).toContainText("2 / 2");
     await card.locator('.product-photo-slide[aria-hidden="false"]').tap(); await expect(page).toHaveURL(`/products/${multi.slug}`);
-    const gallery = page.locator(".product-gallery-detail"); await swipe(gallery.locator(".product-photo-track"), true);
+    const gallery = page.locator(".product-gallery-detail"); await expect(gallery.getByRole("button", { name: "Növbəti şəkil", exact: true })).toBeEnabled(); await swipe(gallery.locator(".product-photo-track"), true);
     await expect(gallery.locator(".photo-count")).toContainText("2 / 2");
     await expectOptimizedSource(gallery.locator('.product-photo-slide[aria-hidden="false"] img'), `/api/media/${secondImage}?public=1`);
     await expect(gallery.getByRole("button", { name: `${multi.name} şəkil 2`, exact: true })).toHaveAttribute("aria-current", "true");
