@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { StoreLink as Link } from "@/components/store-link";
 import { publicSettings } from "@/lib/settings";
 import { pageMetadata } from "@/lib/seo";
 import { PolicyContact } from "@/components/policy-contact";

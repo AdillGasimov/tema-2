@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { StoreLink as Link } from "./store-link";
 import { BrandLogo } from "./brand-logo";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Menu, Search, ShoppingBag, X, ArrowRight, MessageCircle, ShieldCheck, Truck } from "lucide-react";

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { StoreLink as Link } from "./store-link";
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, CheckCircle2, MessageCircle, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";

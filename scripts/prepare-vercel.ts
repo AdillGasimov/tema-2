@@ -26,11 +26,15 @@ for (const [script, args] of [
   ["scripts/apply-catalog-review.ts", []],
   ["scripts/apply-storefront-availability.ts", []],
 ] as const) {
+  console.log(`Deployment database step: ${script}`);
   const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], { env: process.env, stdio: "inherit" });
   if (result.error) {
     console.error("Could not start the deployment database preparation command.");
     process.exit(1);
   }
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  if (result.status !== 0) {
+    console.error(`Deployment database preparation failed at ${script} (exit ${result.status ?? "signal"}).`);
+    process.exit(result.status ?? 1);
+  }
 }
 console.log("Deployment preparation is ready. Existing accounts, inventory and financial history were preserved; owner catalog presentation is audited separately.");

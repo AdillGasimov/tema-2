@@ -1,13 +1,11 @@
-import Link from "next/link";
+import { StoreLink as Link } from "@/components/store-link";
 import { cache } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { catalog } from "@/lib/catalog";
-import { db } from "@/lib/db";
+import { catalog, storefrontCategories as categoriesForPage } from "@/lib/catalog";
 import { AppError } from "@/lib/errors";
 import { conciseDescription, pageMetadata } from "@/lib/seo";
 import { ProductCard } from "@/components/product-card";
 type Params = Record<string, string | string[] | undefined>;
-const categoriesForPage = cache(() => db.productCategory.findMany({ orderBy: { name: "asc" } }));
 const loadCatalog = cache(async (query: string) => {
   try { return { data: await catalog(new URLSearchParams(query)), error: "" }; }
   catch (error) {

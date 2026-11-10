@@ -1,5 +1,5 @@
 import { publicImageSrc } from "@/lib/public-image";
-import Link from "next/link";
+import { StoreLink as Link } from "./store-link";
 import Image from "next/image";
 import { ArrowUpRight, Package } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalog";

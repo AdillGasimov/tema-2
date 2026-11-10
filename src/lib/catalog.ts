@@ -2,6 +2,11 @@ import { Prisma } from "@prisma/client";
 import { db } from "./db";
 import { toMinor } from "./money";
 import { AppError } from "./errors";
+import { cache } from "react";
+
+// Share the identical navigation/filter read within one render, never across
+// requests: category edits and all product/stock/price reads stay current.
+export const storefrontCategories = cache(() => db.productCategory.findMany({ orderBy: { name: "asc" } }));
 export const publicProductSelect = {
   id: true, name: true, slug: true, description: true, shortDescription: true, featured: true, seoTitle: true, seoDescription: true,
   category: { select: { id: true, name: true, slug: true } },
