@@ -12,6 +12,22 @@ beforeAll(async () => { admin = new Client({ connectionString: process.env.DATAB
 afterAll(async () => { await admin.end(); });
 
 describe("database roles with a tight connection limit", () => {
+  it("serves a read while the other pooled connection is occupied, without exceeding two connections", async () => {
+    // Same driver timeout as the incident, shortened to keep the real queue
+    // reproduction bounded. The held connection performs no business writes.
+    const run = async (max: number) => {
+      const pool = new Pool({ ...databasePoolConfig(), max, connectionTimeoutMillis: 150 });
+      const held = await pool.connect();
+      try {
+        const result = await pool.query("SELECT 42 AS value").then(r => r.rows[0].value, error => error.message);
+        expect(pool.totalCount).toBeLessThanOrEqual(max);
+        return result;
+      } finally { held.release(); await pool.end(); }
+    };
+    expect(await run(1)).toBe("timeout exceeded when trying to connect");
+    const pooled = databasePoolConfig({ DATABASE_URL: "postgresql://user:password@pooled.db.prisma.io/postgres" });
+    expect(await run(pooled.max)).toBe(42);
+  });
   it("keeps a Vercel request alive for idle cleanup while leaving checked-out connections usable", async () => {
     vi.stubEnv("VERCEL", "1"); vi.stubEnv("VERCEL_URL", "pool-test.example"); vi.stubEnv("VERCEL_REGION", "fra1");
     const symbol = Symbol.for("@vercel/request-context"), previous = Reflect.get(globalThis, symbol);
@@ -57,5 +73,7 @@ describe("database roles with a tight connection limit", () => {
     const config = databasePoolConfig({ DATABASE_URL: url.toString() });
     const bounded = await run(config.max);
     expect(bounded.every(result => result.status === "fulfilled")).toBe(true);
+    const pooledBudget = databasePoolConfig({ DATABASE_URL: "postgresql://user:password@pooled.db.prisma.io/postgres" }).max;
+    expect((await run(pooledBudget)).every(result => result.status === "fulfilled")).toBe(true);
   });
 });

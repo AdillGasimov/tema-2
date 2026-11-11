@@ -8,9 +8,20 @@ describe("serverless database connection budgets", () => {
     expect(transactionStartupWait({ DEPLOYMENT_DB_PREPARATION: "true" })).toBe(2000);
     expect(transactionStartupWait({ DEPLOYMENT_DB_PREPARATION: "1" })).toBe(15000);
   });
-  it("defaults to one connection per worker", () => {
+  it("defaults to one connection on direct or unknown endpoints", () => {
     expect(databasePoolConfig({}).max).toBe(1);
     expect(databasePoolConfig({}).allowExitOnIdle).toBe(true);
+  });
+  it("allows two connections only on the documented Prisma transaction pool", () => {
+    for (const host of ["db.prisma.io", "pooled.db.prisma.io"]) {
+      const env = { DATABASE_URL: `postgresql://user:password@${host}:5432/postgres?sslmode=verify-full` };
+      expect(databasePoolConfig(env).max).toBe(2);
+      expect(databasePoolConfig({ ...env, DEPLOYMENT_DB_PREPARATION: "1" }).max).toBe(1);
+      expect(databasePoolConfig({ ...env, DATABASE_POOL_MAX: "1" }).max).toBe(1);
+    }
+    for (const connection of ["postgresql://user:password@pooled.db.prisma.io:6432/store", "postgresql://user:password@other.example/store"]) {
+      expect(databasePoolConfig({ DATABASE_URL: connection }).max).toBe(1);
+    }
   });
   it("uses the original migration connection for sequential build setup while keeping request workers pooled", () => {
     const connection = "postgresql://user:encoded%2Fpassword@db.prisma.io:5432/postgres?sslmode=verify-full";
