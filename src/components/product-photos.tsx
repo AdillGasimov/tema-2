@@ -12,6 +12,7 @@ type Props = { images: Photo[]; name: string; href?: string; mode: "card" | "det
 const subscribeToReady = () => () => {};
 const clientReady = () => true;
 const serverReady = () => false;
+const photoOffset = (element: HTMLDivElement, position: number) => (element.children[position] as HTMLElement | undefined)?.offsetLeft ?? position * element.getBoundingClientRect().width;
 
 export function ProductPhotos({ images, name, href, mode, discounted = false }: Props) {
   const ready = useSyncExternalStore(subscribeToReady, clientReady, serverReady);
@@ -19,6 +20,7 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const dragged = useRef(false);
   const selected = useRef(0);
+  const requested = useRef<number | null>(null);
   const trackWidth = useRef(0);
   const [index, setIndex] = useState(0);
   // Do not request every full-size gallery photo just because a card is visible.
@@ -28,11 +30,14 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   useEffect(() => {
     const element = track.current;
     if (!element) return;
-    trackWidth.current = element.clientWidth;
+    trackWidth.current = element.getBoundingClientRect().width;
     const observer = new ResizeObserver(() => {
-      if (element.clientWidth === trackWidth.current) return;
-      trackWidth.current = element.clientWidth;
-      element.scrollTo({ left: selected.current * element.clientWidth, behavior: "instant" });
+      const width = element.getBoundingClientRect().width;
+      if (width === trackWidth.current) return;
+      trackWidth.current = width;
+      requested.current ??= selected.current;
+      element.style.scrollSnapType = "none";
+      element.scrollTo({ left: photoOffset(element, requested.current), behavior: "instant" });
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -45,13 +50,19 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   function scrolled() {
     const element = track.current;
     if (!element?.clientWidth) return;
-    if (trackWidth.current && trackWidth.current !== element.clientWidth) {
-      trackWidth.current = element.clientWidth;
-      element.scrollTo({ left: selected.current * element.clientWidth, behavior: "instant" });
+    const width = element.getBoundingClientRect().width;
+    if (trackWidth.current && trackWidth.current !== width) requested.current ??= selected.current;
+    trackWidth.current = width;
+    if (requested.current !== null) {
+      const target = Math.min(requested.current, images.length - 1);
+      requested.current = target; selected.current = target;
+      setIndex(target); load(target);
+      element.style.scrollSnapType = "none";
+      const left = photoOffset(element, target);
+      if (Math.abs(element.scrollLeft - left) > 1) element.scrollTo({ left, behavior: "instant" });
       return;
     }
-    trackWidth.current = element.clientWidth;
-    const position = element.scrollLeft / element.clientWidth;
+    const position = element.scrollLeft / width;
     const next = Math.max(0, Math.min(images.length - 1, Math.round(position)));
     selected.current = next;
     setIndex(next);
@@ -61,10 +72,11 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
     const element = track.current;
     if (!element || next < 0 || next >= images.length) return;
     load(next);
-    element.scrollTo({ left: element.scrollLeft, behavior: "instant" });
-    selected.current = next;
-    const instant = Math.abs(next - index) > 1 || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    element.scrollTo({ left: next * element.clientWidth, behavior: instant ? "instant" : "smooth" });
+    // Keep the requested photo anchored until the next native gesture, even if
+    // the browser restores an older scroll position during loading or rotation.
+    element.style.scrollSnapType = "none";
+    requested.current = next; selected.current = next; setIndex(next);
+    element.scrollTo({ left: photoOffset(element, next), behavior: "instant" });
   }
   function keyDown(event: KeyboardEvent<HTMLDivElement>) {
     dragged.current = false;
@@ -80,7 +92,8 @@ export function ProductPhotos({ images, name, href, mode, discounted = false }: 
   return <div className={`product-gallery product-gallery-${mode}`} role="group" aria-label={`${name} — məhsul şəkilləri`} aria-roledescription={multiple ? "karusel" : undefined} aria-busy={!ready}>
     <div className={`${mode === "card" ? "product-visual" : "detail-image"} product-photos`}>
       {images.length ? <div className="product-photo-track" ref={track} data-ready={ready} onScroll={scrolled} onKeyDown={keyDown} tabIndex={multiple && ready ? 0 : undefined} role="group" aria-label={multiple ? "Şəkilləri ox düymələri ilə dəyişin" : "Məhsul şəkli"}
-        onPointerDown={event => { pointer.current = { x: event.clientX, y: event.clientY }; dragged.current = false; }}
+        onPointerDown={event => { requested.current = null; event.currentTarget.style.scrollSnapType = ""; pointer.current = { x: event.clientX, y: event.clientY }; dragged.current = false; }}
+        onWheel={event => { if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) { requested.current = null; event.currentTarget.style.scrollSnapType = ""; } }}
         onPointerMove={event => { if (pointer.current && (Math.abs(event.clientX - pointer.current.x) > 8 || Math.abs(event.clientY - pointer.current.y) > 8)) dragged.current = true; }}
         onPointerCancel={() => { if (pointer.current) dragged.current = true; pointer.current = null; }}
         onClickCapture={event => { if (dragged.current) { event.preventDefault(); event.stopPropagation(); dragged.current = false; } }}>

@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator } from "@playwright/test";
+import { test, expect, devices, type Page, type Locator } from "@playwright/test";
 async function expectOptimizedSource(image: Locator, source: string) {
   await expect.poll(async () => { const src = await image.getAttribute("src"); return src ? new URL(src, "http://localhost:3100").searchParams.get("url") : null; }).toBe(source);
 }
@@ -131,16 +131,16 @@ test("product photo arrows, dots, keyboard and image links work without preloadi
 });
 
 test("native mobile photo swipes keep links, vertical page scrolling and gallery thumbnails usable", async ({ browser }) => {
-  const context = await browser.newContext({ baseURL: "http://localhost:3100", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const context = await browser.newContext({ ...devices["Pixel 7"], baseURL: "http://localhost:3100", viewport: { width: 390, height: 844 } });
   try {
     const page = await context.newPage(), session = await context.newCDPSession(page), errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    async function swipe(target: Locator, horizontal: boolean) {
+    async function swipe(target: Locator, horizontal: boolean, backward = false) {
       await target.scrollIntoViewIfNeeded(); const box = (await target.boundingBox())!;
-      const start = { x: box.x + box.width * (horizontal ? .8 : .5), y: box.y + box.height * .65 };
+      const start = { x: box.x + box.width * (horizontal ? (backward ? .2 : .8) : .5), y: box.y + box.height * .65 };
       await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
       for (let step = 1; step <= 8; step++) {
-        await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: start.x - (horizontal ? box.width * .6 * step / 8 : 0), y: start.y - (horizontal ? 0 : Math.min(120, box.height * .5) * step / 8) }] });
+        await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: start.x + (horizontal ? (backward ? 1 : -1) * box.width * .6 * step / 8 : 0), y: start.y - (horizontal ? 0 : Math.min(120, box.height * .5) * step / 8) }] });
         await page.waitForTimeout(20);
       }
       await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
@@ -165,10 +165,13 @@ test("native mobile photo swipes keep links, vertical page scrolling and gallery
     await gallery.getByRole("button", { name: "Növbəti şəkil", exact: true }).tap(); await expect(gallery.locator(".photo-count")).toContainText(`2 / ${galleryPhotoCount}`);
     await gallery.getByRole("button", { name: `${multi.name} şəkil ${galleryPhotoCount}`, exact: true }).tap();
     await expect(gallery.locator(".photo-count")).toContainText(`${galleryPhotoCount} / ${galleryPhotoCount}`);
+    await gallery.screenshot({ path: "test-results/product-gallery-mobile.png" });
+    await expect(gallery.locator(".photo-count")).toContainText(`${galleryPhotoCount} / ${galleryPhotoCount}`);
     await page.setViewportSize({ width: 844, height: 390 });
     await expect.poll(() => gallery.locator(".product-photo-track").evaluate(element => element.scrollLeft / element.clientWidth)).toBeCloseTo(galleryPhotoCount - 1, 1);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => gallery.locator(".product-photo-track").evaluate(element => element.scrollLeft / element.clientWidth)).toBeCloseTo(galleryPhotoCount - 1, 1);
+    await swipe(gallery.locator(".product-photo-track"), true, true); await expect(gallery.locator(".photo-count")).toContainText(`${galleryPhotoCount - 1} / ${galleryPhotoCount}`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); expect(errors).toEqual([]);
   } finally { await context.close(); }
 });
