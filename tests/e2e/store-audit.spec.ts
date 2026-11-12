@@ -106,10 +106,12 @@ test("search appearance follows current branding and delivery while approved art
   const logo = await page.request.get("/branding/furycar/logo.png"); expect(logo.status()).toBe(200);
   try {
     const name = `SEO ${suffix} </script><script>throw new Error(1)</script>`;
-    expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(current.settings), brandName: name, deliveryFreeRegions: "" }, rule: current.rule } })).ok()).toBe(true);
+    expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(current.settings), brandName: name, domain: "https://www.furycar.shop", deliveryFreeRegions: "" }, rule: current.rule } })).ok()).toBe(true);
     await page.goto("/"); await expect(page).toHaveTitle(`${name} | Avtomobil aksesuarları və ətirləndiricilər`);
     expect((await siteData()).every(value => value.name === name)).toBe(true);
     expect(await page.locator('meta[name="description"]').getAttribute("content")).not.toContain("ödənişsiz");
+    const html = await (await page.request.get("/")).text();
+    expect(html.split("</head>")[0]).toContain('name="google-site-verification" content="GNnIWQ3Ln3ygpUHfFGPt7nn7TqAZHplis1umi7DyZuo"');
     expect(errors).toEqual([]);
   } finally {
     expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: cleanSettings(current.settings), rule: current.rule } })).ok()).toBe(true);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CartProvider } from "@/components/cart-provider";
 import { publicSettings } from "@/lib/settings";
 import { publicBrandImage } from "@/lib/public-brand-image";
+import { googleSiteVerification } from "@/lib/search-verification";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,5 +14,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const s = await publicSettings();
-  return <html lang="az"><body style={{ "--brand": s.primaryColor, "--ink": s.backgroundColor } as React.CSSProperties}><CartProvider>{children}</CartProvider></body></html>;
+  const verification = googleSiteVerification(s.domain);
+  return <html lang="az"><head>{verification && <meta name="google-site-verification" content={verification} />}</head><body style={{ "--brand": s.primaryColor, "--ink": s.backgroundColor } as React.CSSProperties}><CartProvider>{children}</CartProvider></body></html>;
 }

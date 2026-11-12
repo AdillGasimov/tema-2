@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { homeSearchCopy, homeSiteStructuredData, serializeJsonLd } from "../../src/lib/search-appearance";
 import { publicBrandImage } from "../../src/lib/public-brand-image";
+import { googleSiteVerification } from "../../src/lib/search-verification";
 
 const brand = { brandName: "FuryCar", domain: "https://www.furycar.shop", logoKey: "images/b16857c9-198a-4ea2-9bfd-44a29e0a4732.webp", faviconKey: "images/69af2cfc-0e4e-47dd-9c6f-bbb3835abb25.webp", instagram: "", tiktok: "" };
 describe("search result branding", () => {
+  it("includes the owner-provided verification tag only for its exact HTTPS property", () => {
+    expect(googleSiteVerification(brand.domain)).toBe("GNnIWQ3Ln3ygpUHfFGPt7nn7TqAZHplis1umi7DyZuo");
+    for (const domain of ["https://other.example", "https://www.furycar.shop.example", "http://www.furycar.shop", "http://localhost:3100", "invalid"]) expect(googleSiteVerification(domain)).toBeUndefined();
+  });
   it("uses the configured name and actual free-delivery offer in concise Azerbaijani copy", () => {
     const copy = homeSearchCopy({ ...brand, deliveryFreeRegions: "28 May (Bakı)" });
     expect(copy.title).toBe("FuryCar | Avtomobil aksesuarları və ətirləndiricilər");
