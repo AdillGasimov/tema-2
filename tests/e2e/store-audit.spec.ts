@@ -85,6 +85,37 @@ test("public policies, delivery, footer, category navigation and SEO are complet
   await page.goto(`/products?category=${category.slug}`); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ətirləndiricilər"); expect(await page.title()).toContain("Ətirləndiricilər"); expect(titles.has(await page.title())).toBe(false);
 });
 
+test("search appearance follows current branding and delivery while approved artwork is publicly crawlable", async ({ page }) => {
+  const current = await (await admin.request.get("/api/admin/settings")).json();
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+  async function siteData() {
+    return page.locator('script[type="application/ld+json"]').evaluateAll(nodes => {
+      const data = nodes.map(node => JSON.parse(node.textContent || "{}"));
+      return data.find(value => Array.isArray(value["@graph"]))["@graph"] as { "@type": string; name: string; url: string; publisher?: { "@id": string }; "@id": string }[];
+    });
+  }
+  await page.goto("/");
+  await expect(page).toHaveTitle(`${current.settings.brandName} | Avtomobil aksesuarları və ətirləndiricilər`);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", new RegExp("28 May \\(Bakı\\) üçün çatdırılma ödənişsizdir"));
+  const original = await siteData();
+  expect(original.map(value => value["@type"])).toEqual(["Organization", "WebSite"]);
+  expect(original[1]).toMatchObject({ name: current.settings.brandName, url: "http://localhost:3100/", publisher: { "@id": original[0]["@id"] } });
+  const icon = await page.request.get("/branding/furycar/favicon.png");
+  expect(icon.status()).toBe(200); expect(icon.headers()["content-type"]).toContain("image/png");
+  expect(await sharp(await icon.body()).metadata()).toMatchObject({ width: 1254, height: 1254 });
+  const logo = await page.request.get("/branding/furycar/logo.png"); expect(logo.status()).toBe(200);
+  try {
+    const name = `SEO ${suffix} </script><script>throw new Error(1)</script>`;
+    expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: { ...cleanSettings(current.settings), brandName: name, deliveryFreeRegions: "" }, rule: current.rule } })).ok()).toBe(true);
+    await page.goto("/"); await expect(page).toHaveTitle(`${name} | Avtomobil aksesuarları və ətirləndiricilər`);
+    expect((await siteData()).every(value => value.name === name)).toBe(true);
+    expect(await page.locator('meta[name="description"]').getAttribute("content")).not.toContain("ödənişsiz");
+    expect(errors).toEqual([]);
+  } finally {
+    expect((await admin.request.post("/api/admin/settings", { headers: origin, data: { settings: cleanSettings(current.settings), rule: current.rule } })).ok()).toBe(true);
+  }
+});
+
 test("product photo arrows, dots, keyboard and image links work without preloading every photo", async ({ page }) => {
   const errors: string[] = [], extraPhotoRequests: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
