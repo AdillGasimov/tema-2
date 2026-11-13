@@ -1,6 +1,6 @@
 **Automatic Azerbaijani translation for CSV product imports**
 
-Date: 13 November 2026. Status: proposed design, awaiting owner approval.
+Date: 13 November 2026. Status: approved by the owner with “do”; implementation in progress.
 
 **Intent and scope**
 
