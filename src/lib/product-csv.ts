@@ -19,6 +19,7 @@ const aliases: Record<string, string[]> = {
   shortDescription: ["Qısa təsvir", "short_description", "shortDescription", "subtitle"],
   slug: ["URL adı", "slug"], variant: ["Variant", "variant"], discount: ["Endirim AZN", "discount", "discount_azn"],
   imageUrls: ["image_urls", "image_url", "Şəkil URL-ləri"],
+  csvFormat: ["furycar_csv_format"],
 };
 // These columns belong to the extension's Full CSV. They are never used as
 // selling price, cost, stock or descriptions chosen by the owner.
@@ -76,7 +77,19 @@ function csvData(text: string, required: string[]) {
   if (new Set(keys).size !== keys.length) throw new AppError("CSV başlıqlarında təkrarlanan sütun var.");
   if (required.some(k => !keys.includes(k))) throw new AppError(required.includes("imageUrls") ? "SKU və image_urls sütunları tələb olunur. Əlavədən Tam CSV yüklə seçin." : "Məhsul, SKU, Satış AZN, Maya AZN və Stok sütunları tələb olunur.");
   if (!data.length) throw new AppError("CSV başlıqlarından sonra məhsul sətirləri əlavə edin.");
-  return { data, keys };
+  const format = keys.indexOf("csvFormat");
+  const decoded = format < 0 ? data : data.map(record => {
+    if (record.cells[format]?.trim() !== "1") throw new AppError("Dəstəklənməyən CSV formatı. Faylı yenidən hazırlayın.");
+    // Version 1 exports escape formula prefixes AND existing apostrophes.
+    // Decode one layer only, so repeated downloads never change an identity.
+    return { ...record, cells: record.cells.map((value, i) => i !== format && value.startsWith("'") ? value.slice(1) : value) };
+  });
+  return { data: decoded, keys: keys as string[], headers: header.cells };
+}
+export type ProductCsvDocument = { headers: string[]; keys: string[]; records: { line: number; cells: string[] }[] };
+export function readProductCsvDocument(text: string): ProductCsvDocument {
+  const { headers, keys, data } = csvData(text, ["name", "sku", "price", "cost", "stock"]);
+  return { headers, keys, records: data };
 }
 function valuesFor(record: { cells: string[] }, keys: (string | undefined)[]): Record<string, string> {
   if (record.cells.length !== keys.length) throw new AppError("Sütun sayı başlıqlarla uyğun deyil. Vergüllü mətnləri dırnağa alın.");
