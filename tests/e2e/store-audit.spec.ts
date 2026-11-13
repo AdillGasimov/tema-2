@@ -100,6 +100,15 @@ test("search appearance follows current branding and delivery while approved art
   const original = await siteData();
   expect(original.map(value => value["@type"])).toEqual(["Organization", "WebSite"]);
   expect(original[1]).toMatchObject({ name: current.settings.brandName, url: "http://localhost:3100/", publisher: { "@id": original[0]["@id"] } });
+  await expect(page.locator(".landing-kicker")).toContainText(current.settings.brandName);
+  const identity = await page.locator(".home-editorial-copy > p").last().innerText();
+  expect(identity).toContain(`${current.settings.brandName} — avtomobil aksesuarları üzrə onlayn mağaza.`);
+  const descriptions = await page.locator('script[type="application/ld+json"]').evaluateAll(nodes => JSON.parse(nodes.find(node => node.textContent?.includes('"@graph"'))!.textContent!)["@graph"].map((node: { description: string }) => node.description));
+  expect(descriptions).toEqual([identity, identity]);
+  for (const width of [360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
   const icon = await page.request.get("/branding/furycar/favicon.png");
   expect(icon.status()).toBe(200); expect(icon.headers()["content-type"]).toContain("image/png");
   expect(await sharp(await icon.body()).metadata()).toMatchObject({ width: 1254, height: 1254 });

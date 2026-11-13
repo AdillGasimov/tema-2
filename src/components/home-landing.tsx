@@ -5,6 +5,7 @@ import { ArrowRight, ArrowUpRight, Droplets, MessageCircle, Package, ScanLine, S
 import type { PublicProduct } from "@/lib/catalog";
 import { DeliveryDetails } from "./delivery-details";
 import { ProductCard } from "./product-card";
+import { storeIdentityDescription } from "@/lib/search-appearance";
 import { TrustRow, type PublicSettings } from "./store-shell";
 
 type HomeCategory = {
@@ -26,7 +27,7 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
       <div className="landing-hero-shade" />
       <div className="container landing-hero-inner">
         <div className="landing-hero-copy">
-          <p className="landing-kicker"><span /> AVTOMOBİLİNİZƏ LAYİQ QAYĞI</p>
+          <p className="landing-kicker"><span /> {s.brandName} · AVTOMOBİL AKSESUARLARI</p>
           <h1 id="home-title">{s.heroTitle}</h1>
           <p className="landing-hero-description">{s.heroSubtitle}</p>
           <div className="landing-hero-actions">
@@ -56,7 +57,7 @@ export function HomeLanding({ settings: s, categories, featured, arrivals }: {
 
     <section className="container home-editorial" aria-labelledby="care-title">
       <div className="home-editorial-image"><Image src="/images/storefront/care.webp" alt="Mikrofiber dəsmalla avtomobilin üzərindəki su damcılarının silinməsi" fill sizes="(max-width: 760px) 100vw, 48vw" /></div>
-      <div className="home-editorial-copy"><p className="eyebrow">HƏR GÜN BİR AZ QAYĞI</p><h2 id="care-title">Yaxşı görünüş<br />detallardan başlayır.</h2><p>Təmiz səthlər, rahat salon və xoş bir yol. Avtomobiliniz üçün gündəlik qulluq vasitələrini bir yerdə kəşf edin.</p><div className="home-editorial-points"><span><Droplets size={18} /> Gündəlik təmizlik</span><span><Sparkles size={18} /> Salon rahatlığı</span></div><Link className="btn btn-dark" href="/products">Kolleksiyaya bax <ArrowUpRight size={18} /></Link></div>
+      <div className="home-editorial-copy"><p className="eyebrow">{s.brandName} HAQQINDA</p><h2 id="care-title">Yaxşı görünüş<br />detallardan başlayır.</h2><p>{storeIdentityDescription(s.brandName)}</p><div className="home-editorial-points"><span><Droplets size={18} /> Gündəlik təmizlik</span><span><Sparkles size={18} /> Salon rahatlığı</span></div><Link className="btn btn-dark" href="/products">Kolleksiyaya bax <ArrowUpRight size={18} /></Link></div>
     </section>
 
     {s.showNewArrivals && arrivals.length > 0 && (featured.length > 0 || !s.showFeatured) && <section className="container home-section" aria-labelledby="arrivals-title">
