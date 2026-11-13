@@ -1,6 +1,6 @@
 import { AppError } from "./errors";
 
-export async function readJsonBody(req: Request, limit: number): Promise<unknown> {
+export async function readJsonBody(req: Pick<Request, "headers" | "body">, limit: number): Promise<unknown> {
   const declared = req.headers.get("content-length");
   if (declared && (!/^\d+$/.test(declared) || Number(declared) > limit)) throw new AppError("Sorğu çox böyükdür.", 413);
   if (!req.body) throw new AppError("Sorğu boşdur.");
