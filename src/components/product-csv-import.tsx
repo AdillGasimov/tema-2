@@ -1,11 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Download, FileSpreadsheet, X } from "lucide-react";
 import { csv as makeCsv } from "@/lib/csv";
 import { money } from "@/lib/money";
 import { MAX_PRODUCT_CSV_BYTES, MAX_PRODUCT_CSV_ROWS, PRODUCT_CSV_HEADERS } from "@/lib/product-csv";
+import { createTranslationDraft } from "@/lib/product-translation-csv";
+import { finishTranslationSession, reviewedTranslationSession, type TranslationProgress, type TranslationSession } from "@/lib/product-translation-session";
+import type { ProductTranslationInput, ProductTranslationText } from "@/lib/product-translation-schema";
 import type { ProductImportPreview, ProductImportResult, ProductPhotoJob } from "@/lib/product-import";
 import { Table } from "./dashboard-ui";
 
@@ -18,6 +21,17 @@ async function requestImport(data: unknown, photo = false) {
   if (!response.ok) throw new Error(typeof result?.error === "string" ? result.error : "İdxal alınmadı.");
   return result;
 }
+async function requestTranslation(input: ProductTranslationInput, signal: AbortSignal): Promise<unknown> {
+  const response = await fetch("/api/admin/product-translate", { method: "POST", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  let result; try { result = await response.json(); } catch { throw new Error("Tərcümə cavabı alınmadı. Yenidən cəhd edin."); }
+  if (!response.ok) throw new Error(typeof result?.error === "string" ? result.error : "Tərcümə alınmadı. Yenidən cəhd edin.");
+  return result;
+}
+function downloadPreparedCsv(content: string, name: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a"); link.href = url; link.download = `${name.replace(/\.csv$/i, "")}-az.csv`;
+  document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+}
 function downloadTemplate() {
   const url = URL.createObjectURL(new Blob([makeCsv([PRODUCT_CSV_HEADERS])], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a"); link.href = url; link.download = "mehsul-idxal-sablonu.csv";
@@ -28,17 +42,42 @@ export function ProductCsvImport({ categories, onClose }: { categories: { id: st
   const [preview, setPreview] = useState<ProductImportPreview | null>(null), [result, setResult] = useState<ProductImportResult | null>(null);
   const [content, setContent] = useState(""), [key, setKey] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [photoResult, setPhotoResult] = useState<PhotoResult | null>(null), [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  function reset() { setPreview(null); setResult(null); setContent(""); setKey(""); setError(""); setPhotoResult(null); setProgress(null); }
+  const session = useRef<{ source: string; translation: TranslationSession } | null>(null), controller = useRef<AbortController | null>(null), mounted = useRef(true);
+  const [reviewed, setReviewed] = useState(false);
+  const [translationProgress, setTranslationProgress] = useState<TranslationProgress | null>(null), [review, setReview] = useState<ProductTranslationText[]>([]);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; controller.current?.abort(); }; }, []);
+  function reset(keepTranslation = false) {
+    setPreview(null); setResult(null); setContent(""); setKey(""); setError(""); setPhotoResult(null); setProgress(null);
+    if (!keepTranslation) { session.current = null; setTranslationProgress(null); setReview([]); }
+  }
   async function checkFile() {
-    reset(); if (!file) { setError("CSV faylı seçin."); return; }
+    reset(kind === "products"); if (!file) { setError("CSV faylı seçin."); return; }
     if (!file.name.toLowerCase().endsWith(".csv")) { setError("Excel və ya Google Sheets-dən CSV UTF-8 faylı yükləyin."); return; }
     if (file.size > MAX_PRODUCT_CSV_BYTES) { setError("CSV faylı ən çox 512 KB ola bilər."); return; }
     setBusy(true);
+    const attempt = new AbortController(); controller.current = attempt;
     try {
       let text: string; try { text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()); } catch { throw new Error("Faylı CSV UTF-8 formatında yenidən saxlayın."); }
+      if (kind === "products") {
+        if (!session.current || session.current.source !== text) session.current = { source: text, translation: reviewed ? reviewedTranslationSession(text) : { draft: createTranslationDraft(text), results: {} } };
+        const current = session.current.translation;
+        text = await finishTranslationSession(current, requestTranslation, { signal: attempt.signal, onProgress: value => {
+          if (!mounted.current) return;
+          setTranslationProgress(value);
+          setReview(current.draft.groups.flatMap(group => current.results[group.id] ? [current.results[group.id]] : []));
+        } });
+      }
+      attempt.signal.throwIfAborted();
+      if (!mounted.current) return;
+      setContent(text);
       const checked = await requestImport({ mode: "preview", kind, csv: text, defaultCategoryId: category || undefined }) as ProductImportPreview;
-      setContent(text); setKey(crypto.randomUUID()); setPreview(checked);
-    } catch (e) { setError(e instanceof Error ? e.message : "CSV faylı yoxlanılmadı."); } finally { setBusy(false); }
+      if (mounted.current && !attempt.signal.aborted) { setKey(crypto.randomUUID()); setPreview(checked); }
+    } catch (e) {
+      if (mounted.current) setError(attempt.signal.aborted ? "Tərcümə dayandırıldı. Hazır nəticələr saxlanıldı; davam edə bilərsiniz." : e instanceof Error ? e.message : "CSV faylı yoxlanılmadı.");
+    } finally {
+      if (controller.current === attempt) controller.current = null;
+      if (mounted.current) setBusy(false);
+    }
   }
   async function savePhotos(jobs: ProductPhotoJob[], previous?: PhotoResult) {
     let attached = previous?.attached ?? 0, skipped = previous?.skipped ?? 0;
@@ -72,16 +111,24 @@ export function ProductCsvImport({ categories, onClose }: { categories: { id: st
   }
   return <section className="panel editor-panel csv-import" aria-labelledby="csv-import-title">
     <div className="panel-heading"><h2 id="csv-import-title"><FileSpreadsheet size={20} /> CSV ilə məhsul əlavə et</h2><button type="button" className="icon-btn" aria-label="CSV idxalını bağla" onClick={onClose} disabled={busy}><X size={18} /></button></div>
-    <p>Birmarket və Temu məhsullarını şəkilləri ilə CSV-dən əlavə edin. Əlavədə <strong>Tam CSV yüklə</strong> seçin və ya aşağıdakı şablonu doldurun; şəkil keçidləri <strong>image_urls</strong> sütununda olmalıdır. Bir dəfəyə ən çox {MAX_PRODUCT_CSV_ROWS} sətir və 512 KB qəbul edilir.</p>
+    <p>Birmarket və Temu məhsullarını şəkilləri ilə CSV-dən əlavə edin. Yeni məhsulların adları və təsvirləri avtomatik Azərbaycan dilinə çevrilir. Əlavədə <strong>Tam CSV yüklə</strong> seçin və ya aşağıdakı şablonu doldurun; şəkil keçidləri <strong>image_urls</strong> sütununda olmalıdır. Bir dəfəyə ən çox {MAX_PRODUCT_CSV_ROWS} sətir və 512 KB qəbul edilir.</p>
     <div className="catalog-actions"><button type="button" className="btn btn-outline btn-small" onClick={downloadTemplate}><Download size={16} /> CSV şablonunu yüklə</button></div>
-    <label className="field">İdxal növü<select aria-label="İdxal növü" value={kind} disabled={busy} onChange={e => { reset(); setKind(e.target.value as "products" | "photos"); }}><option value="products">Yeni məhsullar və şəkillər</option><option value="photos">Mövcud məhsullara yalnız şəkil əlavə et (SKU ilə)</option></select></label>
+    <label className="field">İdxal növü<select aria-label="İdxal növü" value={kind} disabled={busy} onChange={e => { reset(); setReviewed(false); setKind(e.target.value as "products" | "photos"); }}><option value="products">Yeni məhsullar və şəkillər</option><option value="photos">Mövcud məhsullara yalnız şəkil əlavə et (SKU ilə)</option></select></label>
     <details className="csv-help"><summary>Sütunlar və doldurma qaydaları</summary><p><strong>Yeni məhsul üçün tələb olunur:</strong> Məhsul, SKU, Satış AZN, Maya AZN, Stok. Qiymətləri 14.99 və ya 14,99 kimi, stoku tam ədəd kimi yazın. Boş qiymət və stok qəbul edilmir. Satış qiymətini və maya dəyərini AZN ilə özünüz doldurun. Temu-nun USD və ya digər valyutadakı qiyməti avtomatik AZN-ə çevrilmir.</p><p>Kateqoriya sütununa mövcud kateqoriyanın adını və ya URL adını yazın. Sütun boşdursa aşağıdakı ümumi kateqoriya işlədilir. URL adı boşdursa məhsul adından hazırlanır. Təsvir, Qısa təsvir və Endirim AZN istəyə bağlıdır; Variant boşdursa Standart seçilir.</p><p>Eyni URL adı olan sətirlər bir məhsulun variantlarıdır. Məhsul adı, təsvir və kateqoriya eyni, variant adları və SKU-lar fərqli olmalıdır. İngilis başlıqları da qəbul edilir: name, sku, price, cost, stock, category, description, short_description, slug, variant, discount.</p><p><strong>Şəkillər:</strong> image_urls sütununda Birmarket və ya Temu şəkil keçidlərini | işarəsi ilə ayırın. Bir məhsulda ən çox 12 şəkil, hər şəkil ən çox 4 MB ola bilər. Şəkillər mağazanın yaddaşına köçürülür. Tam CSV faylındakı digər mənbə sütunları saxlanılmır. Yalnız şəkil idxalı üçün SKU və image_urls kifayətdir.</p></details>
-    <div className="form-grid"><label className="field">CSV faylı<input aria-label="CSV faylı" type="file" accept=".csv,text/csv" disabled={busy} onChange={e => { reset(); setFile(e.target.files?.[0] ?? null); }} /></label>{kind === "products" && <label className="field">Ümumi kateqoriya<select aria-label="Ümumi kateqoriya" value={category} disabled={busy} onChange={e => { reset(); setCategory(e.target.value); }}><option value="">CSV-dəki kateqoriyadan istifadə et</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>)}</select></label>}</div>
+    <div className="form-grid"><label className="field">CSV faylı<input aria-label="CSV faylı" type="file" accept=".csv,text/csv" disabled={busy} onChange={e => { reset(); setReviewed(false); setFile(e.target.files?.[0] ?? null); }} /></label>{kind === "products" && <label className="field">Ümumi kateqoriya<select aria-label="Ümumi kateqoriya" value={category} disabled={busy} onChange={e => { reset(true); setCategory(e.target.value); }}><option value="">CSV-dəki kateqoriyadan istifadə et</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>)}</select></label>}</div>
     <p className="form-hint">{kind === "products" ? "Yeni məhsullar qaralama kimi saxlanılır. Mövcud SKU və URL adları bu rejimdə idxal olunmur." : "Məhsullar SKU ilə tapılır. Qiymət, maya dəyəri, stok, təsvir və yayım statusu dəyişmir. Əvvəl idxal edilmiş şəkillər təkrarlanmır."}</p>
+    {kind === "products" && <label className="csv-ready-option"><input type="checkbox" checked={reviewed} disabled={busy || !file} onChange={e => { reset(); setReviewed(e.target.checked); }} />Hazır Azərbaycan dilində CSV-ni yoxlamışam; tərcüməsiz istifadə et</label>}
     <button type="button" className="btn btn-outline" disabled={busy || !file} onClick={checkFile}>{busy ? "Gözləyin…" : "Faylı yoxla"}</button>
+    {kind === "products" && <p className="form-hint">Tərcümə pulsuzdur, API açarı lazım deyil. Xidmətin günlük həddi təxminən 5 000 simvoldur; böyük faylları kiçik hissələrə bölün. Mətnləri idxaldan əvvəl yoxlayın. Hazır CSV seçimi yalnız mağazadan yüklədiyiniz və yoxladığınız Azərbaycan dilində fayl üçündür.</p>}
+    {kind === "products" && translationProgress && !result && <div className="csv-translation-progress" aria-live="polite"><p>{translationProgress.done} / {translationProgress.total} məhsul tərcümə edildi.</p><progress max={translationProgress.total} value={translationProgress.done} aria-label="Azərbaycan dilinə tərcümənin gedişi" />{busy && translationProgress.done < translationProgress.total && <button type="button" className="text-link" onClick={() => controller.current?.abort()}>Tərcüməni dayandır</button>}</div>}
     <p className="error-message" role={error ? "alert" : undefined}>{error}</p>
+    {kind === "products" && !result && <div className="catalog-actions csv-translation-actions">
+      {error && translationProgress && <button type="button" className="btn btn-outline" disabled={busy} onClick={checkFile}>Tərcüməyə davam et</button>}
+      {content && <button type="button" className="btn btn-outline" disabled={busy} onClick={() => downloadPreparedCsv(content, file?.name || "mehsullar.csv")}><Download size={16} /> Azərbaycan dilində CSV-ni yüklə</button>}
+    </div>}
+    {kind === "products" && review.length > 0 && !result && <section className="csv-translation-review" aria-labelledby="translation-review-title"><h3 id="translation-review-title">Hazırlanmış mətnlər</h3>{review.map((text, i) => <article key={i}><h4>{text.name}</h4><p>{text.shortDescription}</p><details><summary>Ətraflı təsvir</summary><p>{text.description}</p></details></article>)}</section>}
     {preview && !result && <div className="csv-preview"><h3>İdxal önizləməsi</h3><p>{preview.productCount} məhsul · {preview.variantCount} variant · {preview.photos.length} yeni şəkil{kind === "products" ? " · Qaralama" : ""}</p>
-      {kind === "products" && <p className="form-hint">Adları Azərbaycan dilində qısa və aydın yazın. Kateqoriyanı və üz şəklini burada yoxlayın. image_urls sütunundakı ilk şəkil üz şəkli, digərləri məhsul qalereyası olacaq; dəyişiklik üçün CSV-ni düzəldib yenidən yoxlayın.</p>}
+      {kind === "products" && <p className="form-hint">Tərcümə edilmiş adları və təsvirləri, kateqoriyanı və üz şəklini yoxlayın. image_urls sütunundakı ilk şəkil üz şəkli, digərləri məhsul qalereyası olacaq; dəyişiklik üçün CSV-ni düzəldib yenidən yoxlayın.</p>}
       {preview.issues.length > 0 && <div className="error-message" role="alert"><p>Faylda {preview.issues.length} xəta var. Düzəliş edib yenidən yoxlayın; heç bir məhsul saxlanılmayıb.</p><ul>{preview.issues.map((issue, i) => <li key={i}>Sətir {issue.line}: {issue.message}</li>)}</ul></div>}
       {preview.photos.length === 0 && !preview.issues.length && <p className="form-hint">{kind === "products" ? "Bu faylda şəkil keçidləri yoxdur. Şəkillər üçün əlavədən Tam CSV yüklə seçib həmin faylı istifadə edin. Bu faylı təsdiqləsəniz yalnız məhsul məlumatları əlavə ediləcək." : "Bu fayldakı şəkillər artıq məhsullara əlavə edilib."}</p>}
       {preview.rows.length > 0 && <div className="csv-preview-table"><Table headers={["Sətir", kind === "products" ? "Üz şəkli" : "Yeni şəkil", "Məhsul", "Variant / SKU", "Kateqoriya", ...(kind === "products" ? ["Satış", "Maya", "Stok"] : []), "Şəkil"]}>{preview.rows.map(row => {

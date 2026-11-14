@@ -3,93 +3,119 @@ import { translateProductText } from "../../src/lib/product-translation";
 
 const input = { name: "Avroluks AV-198 Glass Spray 50 ml", description: "Glass spray, model AV-198. Volume: 50 ml.", shortDescription: "Glass spray 50 ml." };
 const translated = { name: "Avroluks AV-198 şüşə spreyi — 50 ml", description: "Avroluks AV-198 modeli olan şüşə spreyi. Həcm: 50 ml.", shortDescription: "50 ml həcmli Avroluks AV-198 şüşə spreyi." };
-const completion = (text: unknown = translated, finishReason = "stop", refusal: string | null = null) => ({
-  id: "chatcmpl-test", object: "chat.completion", created: 1794585600, model: "gpt-4.1-mini",
-  choices: [{ index: 0, message: { role: "assistant", content: typeof text === "string" ? text : JSON.stringify(text), refusal, annotations: [] }, logprobs: null, finish_reason: finishReason }],
-  usage: { prompt_tokens: 100, completion_tokens: 100, total_tokens: 200 }, service_tier: "default", system_fingerprint: "fp_test",
-});
-let requests: { url: string; options?: RequestInit }[];
-beforeEach(() => {
-  requests = []; vi.stubEnv("OPENAI_API_KEY", "test-private-translation-key");
-  vi.stubGlobal("fetch", async (url: string, options?: RequestInit) => {
-    requests.push({ url, options });
-    return Response.json(completion());
+const dictionary = new Map(Object.keys(input).map(key => [input[key as keyof typeof input], translated[key as keyof typeof translated]]));
+const answer = (text: string) => ({ responseData: { translatedText: text, match: 0.85 }, quotaFinished: false, responseDetails: "", responseStatus: 200 });
+let requests: { url: URL; options?: RequestInit }[];
+function provider(change: (text: string) => string = text => text) {
+  vi.stubGlobal("fetch", async (url: string | URL, options?: RequestInit) => {
+    const parsed = new URL(url); requests.push({ url: parsed, options });
+    const source = parsed.searchParams.get("q")!;
+    return Response.json(answer(change(dictionary.get(source) || source)));
   });
-});
+}
+beforeEach(() => { requests = []; vi.stubEnv("OPENAI_API_KEY", ""); provider(); });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
-describe("private product translation adapter", () => {
-  it("returns validated Azerbaijani text through a bounded, non-stored structured-output request", async () => {
+describe("free product translation adapter", () => {
+  it("translates all presentation fields without a key, billing endpoint or financial data", async () => {
     expect(await translateProductText(input)).toEqual(translated);
-    expect(requests).toHaveLength(1);
-    expect(requests[0].url).toBe("https://api.openai.com/v1/chat/completions");
-    expect(new Headers(requests[0].options?.headers).get("authorization")).toBe("Bearer test-private-translation-key");
-    const body = JSON.parse(requests[0].options!.body as string);
-    expect(body).toMatchObject({ model: "gpt-4.1-mini", store: false, max_completion_tokens: 6144, response_format: { type: "json_schema", json_schema: { strict: true, schema: { additionalProperties: false } } } });
-    expect(body.messages[0].role).toBe("system");
-    expect(body.messages[1].role).toBe("user");
-    expect(JSON.parse(body.messages[1].content)).toEqual(input);
-    expect(JSON.stringify(body)).not.toContain("test-private-translation-key");
-    expect(requests[0].options?.signal).toBeInstanceOf(AbortSignal);
+    expect(requests).toHaveLength(3);
+    for (const request of requests) {
+      expect(request.url.origin + request.url.pathname).toBe("https://api.mymemory.translated.net/get");
+      expect(request.url.searchParams.get("langpair")).toBe("autodetect|az");
+      expect(Object.values(input)).toContain(request.url.searchParams.get("q"));
+      expect([...request.url.searchParams.keys()].sort()).toEqual(["langpair", "mt", "q"]);
+      expect(new Headers(request.options?.headers).has("authorization")).toBe(false);
+      expect(request.options?.signal).toBeInstanceOf(AbortSignal);
+    }
   });
-
-  it("keeps already Azerbaijani presentation when the service returns it unchanged", async () => {
+  it("keeps Azerbaijani text returned unchanged by the translator", async () => {
     expect(await translateProductText(translated)).toEqual(translated);
   });
-
-  it("standardizes the store's fragrance terminology", async () => {
-    const az = { name: "Avtomobil aromatlaşdırıcısı", shortDescription: "Aromatlaşdırıcı avtomobil üçündür.", description: "Salonda istifadə edilən aromatlaşdırıcı." };
-    vi.stubGlobal("fetch", async () => Response.json(completion(az)));
-    const result = await translateProductText({ name: "Car air freshener", description: "Air freshener for the cabin.", shortDescription: "" });
-    expect(result.name).toBe("Avtomobil ətirləndiricisi");
-    expect(result.shortDescription).toBe("Ətirləndirici avtomobil üçündür.");
+  it("preserves source text when automatic detection explicitly identifies the target language", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ responseStatus: "403", responseDetails: "PLEASE SELECT TWO DISTINCT LANGUAGES", responseData: { translatedText: "PLEASE SELECT TWO DISTINCT LANGUAGES" }, quotaFinished: null }));
+    expect(await translateProductText(translated)).toEqual(translated);
   });
-
-  it("does not call a paid service when the private key is missing", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
-    await expect(translateProductText(input)).rejects.toMatchObject({ status: 503, message: expect.stringContaining("OPENAI_API_KEY") });
-    expect(requests).toHaveLength(0);
+  it("does not treat a generic denial as proof that the source is Azerbaijani", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ responseStatus: "403", responseDetails: "LIMIT REACHED", responseData: { translatedText: "PLEASE SELECT TWO DISTINCT LANGUAGES" }, quotaFinished: null }));
+    await expect(translateProductText(input)).rejects.toMatchObject({ status: 429 });
   });
-
-  it("rejects extra financial fields before any provider call", async () => {
+  it("reuses identical text and derives missing descriptions from translated facts", async () => {
+    const result = await translateProductText({ name: input.name, description: "", shortDescription: "" });
+    expect(result).toEqual({ name: translated.name, description: translated.name, shortDescription: translated.name });
+    expect(requests).toHaveLength(1);
+  });
+  it("uses consistent fragrance terminology including the free provider's wording", async () => {
+    provider(() => "Avtomobil hava təravətləndiricisi");
+    expect((await translateProductText({ name: "Car air freshener", description: "", shortDescription: "" })).name).toBe("Avtomobil ətirləndiricisi");
+    provider(() => "Avtomobil aromatlaşdırıcısı");
+    expect((await translateProductText({ name: "Car air freshener", description: "", shortDescription: "" })).name).toBe("Avtomobil ətirləndiricisi");
+  });
+  it("rejects extra financial fields before sending text", async () => {
     await expect(translateProductText(Object.assign({}, input, { priceMinor: 1499, stock: 7 }))).rejects.toMatchObject({ name: "ZodError" });
     expect(requests).toHaveLength(0);
   });
-
-  it.each([[401, 503], [403, 503], [429, 429], [500, 502]])("maps provider HTTP %i to a safe owner error", async (upstream, expected) => {
-    vi.stubGlobal("fetch", async () => Response.json({ error: { message: "test-private-translation-key should never be echoed" } }, { status: upstream }));
+  it.each([401, 403, 429, 500])("stops on HTTP %i without a fallback or automatic retry", async status => {
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => { calls++; return Response.json({ responseDetails: "private upstream detail" }, { status }); });
     const error = await translateProductText(input).catch(e => e);
-    expect(error).toMatchObject({ status: expected });
-    expect(error.message).not.toContain("test-private-translation-key");
+    expect(error.status).toBe(status === 429 ? 429 : 502);
+    expect(error.message).not.toContain("private upstream detail");
+    expect(calls).toBe(1);
   });
-
+  it("pauses at the free daily quota even if the HTTP response is successful", async () => {
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => { calls++; return Response.json({ ...answer("DAILY LIMIT"), responseStatus: 403, quotaFinished: true }); });
+    await expect(translateProductText(input)).rejects.toMatchObject({ status: 429, message: expect.stringMatching(/pulsuz/i) });
+    expect(calls).toBe(1);
+  });
   it.each([
-    ["refusal", completion(translated, "stop", "Refused")],
-    ["truncated output", completion(translated, "length")],
-    ["malformed JSON", completion("not JSON")],
-    ["missing field", completion({ name: translated.name, description: translated.description })],
-    ["unknown field", completion({ ...translated, price: "0" })],
-    ["overlong field", completion({ ...translated, description: "a".repeat(10001) })],
-    ["changed quantity", completion({ ...translated, description: "Avroluks AV-198 şüşə spreyi. Həcm: 100 ml.", name: "Avroluks AV-198 şüşə spreyi — 100 ml", shortDescription: "100 ml həcmli sprey." })],
-    ["invented numeric claim", completion({ ...translated, description: translated.description + " 99 faiz qoruyur." })],
-  ])("rejects %s instead of accepting an unsafe translation", async (_label, data) => {
+    ["invalid envelope", {}],
+    ["empty translation", answer("")],
+    ["body-level refusal", { ...answer("Not supported"), responseStatus: 400 }],
+    ["overlong name", answer("a".repeat(161))],
+    ["invalid control characters", answer("Invalid\u0001text")],
+  ])("rejects %s before the text can be imported", async (_label, data) => {
     vi.stubGlobal("fetch", async () => Response.json(data));
     await expect(translateProductText(input)).rejects.toMatchObject({ status: 502 });
   });
-
-  it("bounds an oversized upstream response without revealing it", async () => {
-    vi.stubGlobal("fetch", async () => Response.json({ extra: "x".repeat(100000), ...completion() }));
+  it.each([
+    ["changed quantity", (text: string) => text.replace(/50 ml/g, "100 ml")],
+    ["invented numeric claim", (text: string) => text + " 99 faiz qoruyur."],
+    ["changed volume unit with identical digits", (text: string) => text.replace(/50 ml/g, "50 l")],
+    ["reused number in an invented percentage", (text: string) => text + " 50 faiz qoruyur."],
+    ["changed model with identical digits", (text: string) => text.replace(/AV-198/g, "ZX-198")],
+    ["removed negative sign", (text: string) => text.replace(/−10/g, "10")],
+  ])("rejects %s", async (label, change) => {
+    provider(change);
+    const value = label === "removed negative sign" ? { name: "Spray −10 °C", description: "", shortDescription: "" } : input;
+    await expect(translateProductText(value)).rejects.toMatchObject({ status: 502, message: expect.stringContaining("ölçü") });
+  });
+  it("accepts localized dimensions, decimal commas, units and pieces", async () => {
+    provider(() => "Mikrofiber dəsmal 40 × 60 sm, 1,5 kq, 2 ədəd, model AV-198");
+    const value = { name: "Microfiber cloth 40 x 60 cm, 1.5 kg, 2 pcs, model AV-198", description: "", shortDescription: "" };
+    expect((await translateProductText(value)).name).toContain("40 × 60 sm");
+  });
+  it("splits longer UTF-8 descriptions at words within the documented 500-byte limit", async () => {
+    const description = "Yumşaq mikrofiber dəsmal. ".repeat(50).trim();
+    const result = await translateProductText({ name: "Mikrofiber dəsmal", description, shortDescription: "" });
+    expect(result.description).toBe(description);
+    expect(result.shortDescription.length).toBeLessThanOrEqual(500);
+    expect(requests.length).toBeGreaterThan(2);
+    expect(requests.every(r => Buffer.byteLength(r.url.searchParams.get("q")!, "utf8") <= 500)).toBe(true);
+  });
+  it("bounds an oversized upstream response", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ ...answer("Şüşə spreyi"), extra: "x".repeat(70000) }));
     await expect(translateProductText(input)).rejects.toMatchObject({ status: 502 });
   });
-
-  it("stops a stalled provider request at the documented deadline without retrying", async () => {
+  it("stops a stalled request at the total deadline without retrying", async () => {
     vi.useFakeTimers(); let calls = 0;
     vi.stubGlobal("fetch", (_url: string, options: RequestInit) => {
       calls++;
       return new Promise((_resolve, reject) => options.signal!.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true }));
     });
-    const pending = expect(translateProductText(input)).rejects.toMatchObject({ status: 504 });
-    await vi.advanceTimersByTimeAsync(40000); await pending;
+    const pending = translateProductText(input).catch(error => error);
+    await vi.advanceTimersByTimeAsync(40000); expect(await pending).toMatchObject({ status: 504 });
     expect(calls).toBe(1);
   });
 });

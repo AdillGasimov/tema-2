@@ -15,6 +15,7 @@
 
 .csv-photo-progress progress{width:100%;height:.75rem;accent-color:var(--primary,#6b8546)}
 .csv-photo-result li{overflow-wrap:anywhere}
+.csv-translation-progress{margin:18px 0;font-size:13px;line-height:1.8}.csv-translation-progress progress{width:100%;height:.75rem;accent-color:var(--primary,#6b8546)}.csv-translation-progress .text-link{margin-top:8px}.csv-translation-actions .btn{max-width:100%;white-space:normal;text-align:center}.csv-translation-review{margin:22px 0;min-width:0}.csv-translation-review h3{font-size:18px;margin-bottom:12px}.csv-translation-review article{padding:14px 0;border-bottom:1px solid #e5e9e1;overflow-wrap:anywhere}.csv-translation-review h4{font-size:14px;margin-bottom:7px}.csv-translation-review p,.csv-translation-review summary{font-size:13px;line-height:1.7}.csv-translation-review p{white-space:pre-wrap}.csv-translation-review summary{cursor:pointer;font-weight:600;margin-top:8px}
 
 .product-delete-button{color:#b42318;border-color:#e5b5af}
 .product-delete-button:hover{background:#fff3f1}
@@ -109,3 +110,5 @@
 .store-footer .brand .brand-wordmark-custom{font-size:30px}
 .login-story .brand .brand-wordmark-custom{font-size:34px}
 @media(max-width:600px){.brand .brand-logo{width:174px;height:52px}.brand .brand-symbol{width:36px;height:36px}.brand-wordmark-custom{font-size:25px}}
+
+.csv-ready-option{display:flex;align-items:flex-start;gap:.65rem;margin:1rem 0;font-size:.9rem;line-height:1.5}.csv-ready-option input{width:1rem;height:1rem;margin-top:.2rem;flex-shrink:0}

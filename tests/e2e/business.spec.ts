@@ -10,6 +10,14 @@ import { csv } from "../../src/lib/csv";
 import { fullCsv, normalizeProduct, updateProduct } from "../../extensions/birmarket-product-exporter/core.js";
 type Fixture = { run: string; email: string; password: string; otherId: string; otherEmail: string; foreignId: string; foreignCode: string };
 const fixture = (): Fixture => JSON.parse(readFileSync(".local/e2e.json", "utf8"));
+// These legacy cases verify CSV finances/photos, not a paid language service.
+// The new translation browser suite covers actual Azerbaijani fixture output.
+async function stubCsvTranslation(page: Page) {
+  await page.route("**/api/admin/product-translate", async route => {
+    const input = route.request().postDataJSON();
+    await route.fulfill({ json: { name: input.name, description: input.description || input.name, shortDescription: input.shortDescription || input.name } });
+  });
+}
 async function login(page: Page, email: string, password: string) {
   await page.goto("/login"); await page.getByLabel("E-poçt və ya referal kodu", { exact: true }).fill(email); await page.getByLabel("Parol", { exact: true }).fill(password);
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -265,9 +273,10 @@ test("checkout becomes available after the owner configures the WhatsApp number"
 });
 
 test("CSV template, preview and confirmed import create drafts with variants and block duplicate reuploads", async ({ page }) => {
+  await stubCsvTranslation(page);
   const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
   const initial = await (await page.request.get("/api/admin/products")).json();
-  const name = `CSV dəsmal ${f.run}`, slug = `csv-browser-${f.run}`;
+  const name = `CSV dəsmal ${f.run}`, slug = `csv-desmal-${f.run}`;
   const input = csv([["name", "sku", "price", "cost", "stock", "slug", "variant", "description"],
     [name, `CSV-GREEN-${f.run}`, "14.99", "8.50", "7", slug, "Yaşıl", "Nəmi hopduran dəsmal."],
     [name, `CSV-GREY-${f.run}`, "15.99", "9.50", "4", slug, "Boz", "Nəmi hopduran dəsmal."]]);
@@ -298,7 +307,7 @@ test("CSV template, preview and confirmed import create drafts with variants and
   await panel.getByLabel("CSV faylı", { exact: true }).setInputFiles({ name: "invalid.csv", mimeType: "text/csv", buffer: Buffer.from(invalid) });
   await panel.getByRole("button", { name: "Faylı yoxla", exact: true }).click();
   await expect(panel.getByRole("alert")).toContainText("Stok sahəsi boşdur");
-  await expect(panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true })).toHaveCount(0);
 });
 
 test("CSV import API enforces roles, origin, body bounds and confirmation fields", async ({ page, browser }) => {
@@ -324,6 +333,7 @@ test("CSV import API enforces roles, origin, body bounds and confirmation fields
 
 const birmarketPhoto = "https://strgimgr.umico.az/img/product/1680/407af88f-a282-4448-872e-a192c0491806.jpeg";
 test("Full CSV imports a real CDN photo into private storage and the published storefront", async ({ page, browser }) => {
+  await stubCsvTranslation(page);
   const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
   const initial = await (await page.request.get("/api/admin/products")).json();
   const slug = `csv-photo-${f.run}`, sku = `PHOTO-${f.run}`, name = `CSV photo ${f.run}`;
@@ -351,7 +361,7 @@ test("Full CSV imports a real CDN photo into private storage and the published s
 test("photos-only CSV fills an existing product, retries failed images and preserves catalog data", async ({ page }) => {
   const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
   const sku = `CSV-GREEN-${f.run}`;
-  const existing = (await (await page.request.get("/api/admin/products")).json()).products.find((p: { slug: string }) => p.slug === `csv-browser-${f.run}`);
+  const existing = (await (await page.request.get("/api/admin/products")).json()).products.find((p: { slug: string }) => p.slug === `csv-desmal-${f.run}`);
   let metadataImports = 0, photoRequests = 0;
   page.on("request", request => { if (request.url().endsWith("/api/admin/product-import") && request.postDataJSON()?.mode === "import") metadataImports++; });
   await page.route("**/api/admin/product-import-photo", route => { photoRequests++; return photoRequests === 1 ? route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ error: "Şəkil mənbəyi müvəqqəti əlçatan deyil." }) }) : route.continue(); });
@@ -438,9 +448,10 @@ test("product trash API checks administrator role, origin, JSON size and validat
 });
 
 test("Temu extension CSV imports the real provided product photo with owner AZN prices", async ({ page, browser }) => {
+  await stubCsvTranslation(page);
   const f = fixture(); await login(page, f.email, f.password); await page.goto("/admin/products");
   const initial = await (await page.request.get("/api/admin/products")).json();
-  const name = `Temu CSV fixture ${f.run}`, slug = `temu-browser-${f.run}`, imageUrl = "https://img.kwcdn.com/product/fancy/e7a47b3a-c07f-4fd8-b295-7077b607d199.jpg";
+  const name = `Temu CSV fixture ${f.run}`, slug = `temu-csv-fixture-${f.run}`, imageUrl = "https://img.kwcdn.com/product/fancy/e7a47b3a-c07f-4fd8-b295-7077b607d199.jpg";
   // Financial values and metadata are test fixtures; the image is the actual
   // public CDN photo supplied by the owner, fetched by the real server route.
   const product = updateProduct(normalizeProduct({ name, sourceUrl: "https://www.temu.com/az-en/towel-g-601105384433706.html?tracking=private", sourcePrice: "2.99", currency: "USD", imageUrls: [imageUrl] }), { price: "14.99", cost: "7", stock: "3", sku: `TM-601105384433706-${f.run}`, slug });

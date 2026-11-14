@@ -11,7 +11,7 @@ import { appOrigin } from "../../src/lib/site";
 
 const base = appOrigin(), run = randomUUID().slice(0, 8);
 const input = { name: "Glass spray 50 ml", description: "Glass spray, volume 50 ml.", shortDescription: "" };
-const az = { name: "Şüşə spreyi — 50 ml", description: "Şüşələr üçün sprey. Həcm: 50 ml.", shortDescription: "50 ml həcmli şüşə spreyi." };
+const az = { name: "Şüşə spreyi — 50 ml", description: "Şüşələr üçün sprey. Həcm: 50 ml.", shortDescription: "Şüşələr üçün sprey. Həcm: 50 ml." };
 let adminCookie: string, partnerCookie: string, providerCalls = 0, addressIndex = 0;
 const rateIds = new Set<string>();
 function rateId(address: string, bucket: number) { return createHash("sha256").update(`product-translate:${address}:${bucket}`).digest("hex"); }
@@ -39,13 +39,15 @@ beforeAll(async () => {
   }
 });
 beforeEach(() => {
-  providerCalls = 0; vi.stubEnv("OPENAI_API_KEY", "test-key-never-sent-outside-process");
-  vi.stubGlobal("fetch", async () => {
+  providerCalls = 0;
+  vi.stubGlobal("fetch", async (url: string | URL) => {
     providerCalls++;
     // A real query must remain available while the provider is pending. The
     // external service is the only stub; session/role/rate/database are real.
     await db.product.count();
-    return Response.json({ id: "chatcmpl-integration", object: "chat.completion", created: 1794585600, model: "gpt-4.1-mini", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify(az), refusal: null }, finish_reason: "stop" }], usage: { prompt_tokens: 50, completion_tokens: 50, total_tokens: 100 } });
+    const text = new URL(url).searchParams.get("q");
+    const translatedText = text === input.name ? az.name : az.description;
+    return Response.json({ responseData: { translatedText }, responseStatus: 200, quotaFinished: false });
   });
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
@@ -67,22 +69,22 @@ describe("protected product translation route", () => {
     expect((await send({ ...input, priceMinor: 1499 })).status).toBe(400);
     expect(providerCalls).toBe(0);
   });
-  it("returns a clear missing-key response without touching product or inventory data", async () => {
+  it("pauses on the free quota without touching product or inventory data", async () => {
     const before = [await db.product.count(), await db.inventoryMovement.count()];
-    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubGlobal("fetch", async () => { providerCalls++; return Response.json({ responseStatus: 403, quotaFinished: true, responseData: { translatedText: "DAILY LIMIT" } }); });
     const response = await send(input);
-    expect(response.status).toBe(503); expect((await response.json()).error).toContain("OPENAI_API_KEY");
-    expect(providerCalls).toBe(0);
+    expect(response.status).toBe(429); expect((await response.json()).error).toContain("günlük limiti");
+    expect(providerCalls).toBe(1);
     expect([await db.product.count(), await db.inventoryMovement.count()]).toEqual(before);
   });
   it("translates only text outside inventory transactions and returns a noncached result", async () => {
     const before = [await db.product.count(), await db.inventoryMovement.count()];
     const response = await send(input);
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(await response.json()).toEqual(az); expect(providerCalls).toBe(1);
+    expect(await response.json()).toEqual(az); expect(providerCalls).toBe(2);
     expect([await db.product.count(), await db.inventoryMovement.count()]).toEqual(before);
   });
-  it("enforces the persistent administrator request budget before a paid call", async () => {
+  it("enforces the persistent administrator request budget before an external translation call", async () => {
     const address = testAddress(), bucket = Math.floor(Date.now() / 60000);
     for (const n of [bucket, bucket + 1]) {
       const id = rateId(address, n); rateIds.add(id);
