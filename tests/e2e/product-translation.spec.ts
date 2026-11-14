@@ -142,3 +142,39 @@ test("CSV Azerbaijani translation can be stopped and resumed without repeating f
     expect(calls).toEqual(["Spray", "Cloth", "Cloth", "Holder"]);
   } finally { release(); }
 });
+
+
+test("CSV Azerbaijani translation automatically fits long text and saves all details without manual CSV edits", async ({ page }) => {
+  const { panel, categories } = await openImporter(page), f = fixture();
+  const sourceName = "Car windshield sun shade umbrella, UV protection, foldable design, heat insulation, easy storage and universal fit for sedans and SUVs";
+  const fullName = "Avtomobilin ön şüşəsi üçün günəşdən qoruyan çətir, UV qorunması, qatlanan dizayn, istilik izolyasiyası, asan saxlama və sedanlar və SUV-lər üçün universal uyğunluq";
+  const fullShort = "Açılıb-bağlanan ön şüşə günəşliyi. ".repeat(20).trim();
+  const fullDescription = "Avtomobil şüşəsi üçün qatlanan günəşlik. ".repeat(300).trim();
+  await page.route("**/api/admin/product-translate", route => route.fulfill({ json: { name: fullName, shortDescription: fullShort, description: fullDescription } }));
+  const sku = "FIT-" + f.run;
+  const input = csv([["name", "sku", "price", "cost", "stock"], [sourceName, sku, "19.99", "5", "3"]]);
+  await panel.getByLabel("CSV faylı", { exact: true }).setInputFiles({ name: "long-product.csv", mimeType: "text/csv", buffer: Buffer.from(input) });
+  await panel.getByRole("button", { name: "Faylı yoxla", exact: true }).click();
+  await expect(panel.getByRole("heading", { name: "İdxal önizləməsi", exact: true })).toBeVisible();
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  const download = page.waitForEvent("download");
+  await panel.getByRole("button", { name: "Azərbaycan dilində CSV-ni yüklə", exact: true }).click();
+  const ready = parseProductCsv(readFileSync((await (await download).path())!, "utf8"));
+  expect(ready.issues).toEqual([]);
+  const text = ready.rows[0];
+  expect(text.name.length).toBeLessThanOrEqual(160); expect(text.shortDescription!.length).toBeLessThanOrEqual(500);
+  expect(text.description.length).toBeGreaterThan(10000);
+  for (const full of [fullName, fullShort, fullDescription]) expect(text.description).toContain(full);
+  await panel.getByRole("button", { name: "Qaralamaları əlavə et", exact: true }).click();
+  await expect(panel.getByRole("status").filter({ hasText: "1 məhsul və 1 variant qaralama kimi əlavə edildi." })).toBeVisible();
+  const data = await (await page.request.get("/api/admin/products")).json();
+  const saved = data.products.find((product: { variants: { sku: string }[] }) => product.variants.some(variant => variant.sku === sku));
+  expect(saved).toMatchObject({ status: "DRAFT", categoryId: categories[0].id, name: text.name, description: text.description, shortDescription: text.shortDescription });
+  expect(saved.variants[0]).toMatchObject({ sku, priceMinor: 1999, costMinor: 500, stock: 3 });
+  await panel.getByRole("button", { name: "CSV idxalını bağla", exact: true }).click();
+  await page.getByLabel("Məhsullarda axtar", { exact: true }).fill(sku);
+  await page.getByRole("button", { name: text.name + " redaktə et", exact: true }).click();
+  const editor = page.locator(".editor-form");
+  await expect(editor.locator('textarea[name="description"]')).toHaveValue(text.description);
+  await expect(editor.locator('textarea[name="description"]')).toHaveAttribute("maxlength", "20000");
+});

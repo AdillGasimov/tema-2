@@ -7,6 +7,9 @@ import { POST } from "../../src/app/api/admin/product-translate/route";
 import { db, transaction } from "../../src/lib/db";
 import { provisionAccount } from "../../src/lib/accounts";
 import { auth } from "../../src/lib/auth";
+import { csv } from "../../src/lib/csv";
+import { createTranslationDraft, translatedProductCsv } from "../../src/lib/product-translation-csv";
+import { importProducts } from "../../src/lib/product-import";
 import { appOrigin } from "../../src/lib/site";
 
 const base = appOrigin(), run = randomUUID().slice(0, 8);
@@ -83,6 +86,35 @@ describe("protected product translation route", () => {
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual(az); expect(providerCalls).toBe(2);
     expect([await db.product.count(), await db.inventoryMovement.count()]).toEqual(before);
+  });
+  it("fits expanded translated fields and imports their complete text as a draft", async () => {
+    const sourceName = "Car windshield sun shade umbrella " + run + ", UV protection, foldable design, heat insulation, easy storage and universal fit for sedans and SUVs";
+    const fullName = "Avtomobilin ön şüşəsi üçün günəşdən qoruyan çətir " + run + ", UV qorunması, qatlanan dizayn, istilik izolyasiyası, asan saxlama və sedanlar və SUV-lər üçün universal uyğunluq";
+    const fullShort = "Açılıb-bağlanan ön şüşə günəşliyi. ".repeat(20).trim();
+    const fullDescription = "Avtomobil şüşəsi üçün qatlanan günəşlik. ".repeat(300).trim();
+    const source = { name: sourceName, shortDescription: "Foldable windshield shade.", description: "Sun shade for the windshield." };
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      providerCalls++;
+      const q = new URL(url).searchParams.get("q");
+      return Response.json({ responseStatus: 200, quotaFinished: false, responseData: { translatedText: q === source.name ? fullName : q === source.shortDescription ? fullShort : fullDescription } });
+    });
+    const response = await send(source);
+    expect(response.status).toBe(200);
+    const text = await response.json();
+    expect(text.name.length).toBeLessThanOrEqual(160);
+    expect(text.shortDescription.length).toBeLessThanOrEqual(500);
+    expect(text.description.length).toBeGreaterThan(10000);
+    expect(text.description).toContain(fullName);
+    expect(text.description).toContain(fullShort);
+    expect(text.description).toContain(fullDescription);
+    const category = await db.productCategory.create({ data: { name: "Günəşlik " + run, slug: "fit-" + run } });
+    const sku = "TEXT-FIT-" + run;
+    const draft = createTranslationDraft(csv([["name", "sku", "price", "cost", "stock"], [sourceName, sku, "19.99", "5", "3"]]));
+    const ready = translatedProductCsv(draft, { [draft.groups[0].id]: text });
+    expect(await importProducts(ready, category.id, randomUUID(), "text-fit-" + run)).toEqual({ productCount: 1, variantCount: 1 });
+    const variant = await db.productVariant.findUniqueOrThrow({ where: { sku }, include: { product: true } });
+    expect(variant).toMatchObject({ priceMinor: 1999, costMinor: 500, stock: 3, product: { status: "DRAFT", name: text.name, description: text.description, shortDescription: text.shortDescription } });
+    expect(providerCalls).toBe(3);
   });
   it("enforces the persistent administrator request budget before an external translation call", async () => {
     const address = testAddress(), bucket = Math.floor(Date.now() / 60000);

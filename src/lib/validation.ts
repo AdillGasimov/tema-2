@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRODUCT_TEXT_LIMITS } from "./product-text";
 import { checkoutContactMessages, normalizeCheckoutPhone } from "./checkout-contact";
 export const id = z.string().min(1).max(100);
 export const minor = z.number().int().min(0).max(100_000_000);
@@ -23,8 +24,8 @@ export const variantSchema = z.object({
   lowStock: z.number().int().min(0).max(10000).default(5), active: z.boolean().default(true),
 }).refine(v => v.discountMinor === null || v.discountMinor < v.priceMinor, { message: "Endirim qiyməti satış qiymətindən az olmalıdır." });
 export const productSchema = z.object({
-  id: id.optional(), name: z.string().trim().min(2).max(160), slug: z.string().regex(/^[a-z0-9-]+$/).max(180),
-  description: z.string().max(10000), shortDescription: z.string().trim().max(500).optional(), needsPriceReview: z.boolean().optional(),
+  id: id.optional(), name: z.string().trim().min(2).max(PRODUCT_TEXT_LIMITS.name), slug: z.string().regex(/^[a-z0-9-]+$/).max(180),
+  description: z.string().max(PRODUCT_TEXT_LIMITS.description), shortDescription: z.string().trim().max(PRODUCT_TEXT_LIMITS.shortDescription).optional(), needsPriceReview: z.boolean().optional(),
   // Compatibility with cached old admin forms; ignored by product mutations.
   rightsReviewRequired: z.boolean().optional(), rightsClearance: z.string().trim().max(2000).optional(),
   categoryId: id, status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]), featured: z.boolean(),

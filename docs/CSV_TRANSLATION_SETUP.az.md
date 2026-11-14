@@ -9,7 +9,7 @@ Tərcümə [MyMemory-nin pulsuz xidmətindən](https://mymemory.translated.net/d
 1. Admin → **Məhsullar → CSV idxalı → Yeni məhsullar və şəkillər** seçin.
 2. CSV faylını seçin. Satış qiyməti, maya dəyəri və stok doldurulmalıdır. Kateqoriya faylda boşdursa, **Ümumi kateqoriya** seçin. Böyük faylı kiçik hissələrlə işlədin.
 3. **Faylı yoxla** basın. Ad və təsvirlər ardıcıl tərcümə edilir; variantlar üçün eyni məhsul təkrar tərcümə olunmur.
-4. **Hazırlanmış mətnlər** və önizləmədə Azərbaycan dilini, model/ölçüləri və şəkilləri yoxlayın. Maşın tərcüməsi səhv edə bilər. Uzun ad sahə həddini keçərsə CSV mətnini qısaldın.
+4. **Hazırlanmış mətnlər** və önizləmədə Azərbaycan dilini, model/ölçüləri və şəkilləri yoxlayın. Maşın tərcüməsi səhv edə bilər. Uzun tərcümə edilmiş ad və qısa təsvir avtomatik uyğunlaşdırılır; tam mətn ətraflı təsvirdə saxlanılır. Ad ən çox 160, qısa təsvir 500, ətraflı təsvir 20 000 simvol ola bilər.
 5. **Azərbaycan dilində CSV-ni yüklə** ilə hazırlanmış faylı saxlayın. **Qaralamaları əlavə et** önizləmədəki həmin fayldan məhsulları qaralama kimi yaradır. Sonra məhsulları yoxlayıb yayımlayın.
 
 **Hazır faylı təkrar istifadə**

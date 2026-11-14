@@ -85,3 +85,21 @@ describe("Azerbaijani CSV preparation", () => {
     expect(() => translatedProductCsv(draft, translated)).toThrow(/512|böyük/);
   });
 });
+
+it("exports and reopens automatically fitted translated text with an expanded full description", () => {
+  const draft = createTranslationDraft(sourceCsv([headers, row()]));
+  const fullName = "Şüşə spreyi — " + "avtomobil şüşələrinin təmizlənməsi üçün ".repeat(5);
+  const fullShort = "Şüşə səthləri üçün nəzərdə tutulmuş sprey. ".repeat(15);
+  const fullDescription = "Məhsulun ətraflı təsviri. ".repeat(450);
+  const ready = translatedProductCsv(draft, { [draft.groups[0].id]: { name: fullName, shortDescription: fullShort, description: fullDescription } });
+  const parsed = parseProductCsv(ready);
+  expect(parsed.issues).toEqual([]);
+  expect(parsed.rows[0].name.length).toBeLessThanOrEqual(160);
+  expect(parsed.rows[0].shortDescription!.length).toBeLessThanOrEqual(500);
+  expect(parsed.rows[0].description).toContain(fullName.trim());
+  expect(parsed.rows[0].description).toContain(fullShort.trim());
+  expect(parsed.rows[0].description).toContain(fullDescription.trim());
+  expect(parsed.rows[0].variant).toMatchObject({ priceMinor: 1499, costMinor: 500, stock: 7 });
+  const reopened = createTranslationDraft(ready);
+  expect(translatedProductCsv(reopened, { [reopened.groups[0].id]: reopened.groups[0].input })).toBe(ready);
+});

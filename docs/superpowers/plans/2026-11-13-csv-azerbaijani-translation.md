@@ -8,11 +8,13 @@
 
 **Tech Stack:** Existing Next.js, TypeScript, Zod, native fetch, Vitest, PostgreSQL/Prisma and Playwright. No new runtime dependency or database migration.
 
+**Follow-up fix (14 November):** supplier translation can expand beyond160/500characters. Fit title/short text automatically and retain omitted wording in the full description; share its20000-character bound with CSV validation and the editor. Keep fact checks after fitting.
+
 **Spec:** `docs/superpowers/specs/2026-11-13-csv-azerbaijani-translation-design.md`, approved by the owner's “do”.
 
 ## Global Constraints
 
-- Names at most 160 characters, short descriptions at most 500, full descriptions at most 10000; existing CSV limit 200 rows / 512 KiB remains.
+- Names at most 160 characters, short descriptions at most 500, full descriptions at most 20000; existing CSV limit 200 rows / 512 KiB remains.
 - Translate presentation only; keep prices, costs, stock, discounts, supplier SKUs, category selections, variant identities and image URLs exact. Keep grouped variants together.
 - Use “ətirləndirici”; preserve product facts, model names and numeric specifications. No new benefits or supplier instructions.
 - Owner amendment “do it without cost”: use MyMemory’s anonymous free API only, no key/billing/paid fallback. Respect 5 000 characters/day and 500 bytes/segment; pause on quota. Public startup remains independent.

@@ -73,7 +73,7 @@ describe("free product translation adapter", () => {
     ["invalid envelope", {}],
     ["empty translation", answer("")],
     ["body-level refusal", { ...answer("Not supported"), responseStatus: 400 }],
-    ["overlong name", answer("a".repeat(161))],
+    ["excessive provider text", answer("a".repeat(20001))],
     ["invalid control characters", answer("Invalid\u0001text")],
   ])("rejects %s before the text can be imported", async (_label, data) => {
     vi.stubGlobal("fetch", async () => Response.json(data));
@@ -103,6 +103,50 @@ describe("free product translation adapter", () => {
     expect(result.shortDescription.length).toBeLessThanOrEqual(500);
     expect(requests.length).toBeGreaterThan(2);
     expect(requests.every(r => Buffer.byteLength(r.url.searchParams.get("q")!, "utf8") <= 500)).toBe(true);
+  });
+  it("fits a real 134-character supplier title that expands to 163 Azerbaijani characters without losing its full text", async () => {
+    const source = "Car windshield sun shade umbrella, UV protection, foldable design, heat insulation, easy storage and universal fit for sedans and SUVs";
+    const full = "Avtomobilin ön şüşəsi üçün günəşdən qoruyan çətir, UV qorunması, qatlanan dizayn, istilik izolyasiyası, asan saxlama və sedanlar və SUV-lər üçün universal uyğunluq";
+    provider(() => full);
+    const result = await translateProductText({ name: source, shortDescription: "", description: "" });
+    expect(result.name).toBe("Avtomobilin ön şüşəsi üçün günəşdən qoruyan çətir");
+    expect(result.name.length).toBeLessThanOrEqual(160);
+    expect(result.description).toBe(full);
+    expect(result.shortDescription).toBe(full);
+  });
+  it("fits an expanded short description and keeps every translated field in the full description", async () => {
+    const fullName = "Şüşə spreyi AV-198 — " + "avtomobil şüşələrinin təmizlənməsi üçün ".repeat(5) + "50 ml";
+    const fullShort = "Avtomobil şüşələrində istifadə üçün nəzərdə tutulmuş sprey. ".repeat(12) + "Həcm: 50 ml.";
+    const fullDescription = "Məhsulun ətraflı təsviri. ".repeat(450) + "Model: AV-198. Həcm: 50 ml.";
+    vi.stubGlobal("fetch", async (url: string | URL) => {
+      const text = new URL(url).searchParams.get("q");
+      return Response.json(answer(text === input.name ? fullName : text === input.shortDescription ? fullShort : fullDescription));
+    });
+    const result = await translateProductText(input);
+    expect(result.name.length).toBeLessThanOrEqual(160);
+    expect(result.shortDescription.length).toBeLessThanOrEqual(500);
+    expect(result.description).toContain(fullName);
+    expect(result.description).toContain(fullShort);
+    expect(result.description).toContain(fullDescription);
+    expect(result.description.length).toBeGreaterThan(10000);
+    expect(result.description.length).toBeLessThanOrEqual(20000);
+  });
+  it("does not introduce a partial measurement when a compact name ends near a numeric boundary", async () => {
+    const fullName = "Şüşə spreyi " + "a".repeat(143) + " 50 ml model AV-198";
+    provider(text => text === translated.name ? fullName : text);
+    const result = await translateProductText(input);
+    expect(result.name.length).toBeLessThanOrEqual(160);
+    expect(result.description).toContain(fullName);
+    expect(result.description).toContain("AV-198");
+  });
+
+  it("derives a bounded short description without separating a quantity from its unit", async () => {
+    const fullDescription = "ə".repeat(496) + " 50 ml həcmində şüşə spreyi.";
+    vi.stubGlobal("fetch", async (url: string | URL) => Response.json(answer(new URL(url).searchParams.get("q") === "Glass spray" ? "Şüşə spreyi" : fullDescription)));
+    const result = await translateProductText({ name: "Glass spray", description: "Glass spray, 50 ml.", shortDescription: "" });
+    expect(result.shortDescription.length).toBeLessThanOrEqual(500);
+    expect(result.shortDescription).not.toMatch(/50(?:…)?$/u);
+    expect(result.description).toBe(fullDescription);
   });
   it("bounds an oversized upstream response", async () => {
     vi.stubGlobal("fetch", async () => Response.json({ ...answer("Şüşə spreyi"), extra: "x".repeat(70000) }));

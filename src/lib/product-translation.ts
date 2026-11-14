@@ -31,11 +31,6 @@ function chunks(text: string): string[] {
   if (chunk) result.push(chunk);
   return result;
 }
-function shortText(text: string) {
-  if (text.length <= 500) return text;
-  const end = text.slice(0, 500).lastIndexOf(" ");
-  return text.slice(0, end > 0 ? end : 500).trim();
-}
 
 export async function translateProductText(value: ProductTranslationInput): Promise<ProductTranslationText> {
   const input = productTranslationInputSchema.parse(value);
@@ -80,9 +75,9 @@ export async function translateProductText(value: ProductTranslationInput): Prom
     }
     const name = await translate(input.name);
     const description = input.description.trim() ? await translate(input.description) : name;
-    const shortDescription = input.shortDescription.trim() ? await translate(input.shortDescription) : shortText(description);
+    const shortDescription = input.shortDescription.trim() ? await translate(input.shortDescription) : description;
     const checked = productTranslationTextSchema.safeParse({ name, description, shortDescription });
-    if (!checked.success) throw new AppError("Tərcümə mətni sahə hədlərinə uyğun deyil və ya məlumat çatışmır. CSV mətnini qısaldıb yenidən yoxlayın.", 502);
+    if (!checked.success) throw new AppError("Tərcümə xidməti natamam və ya yararsız mətn qaytardı. Hazır nəticələr saxlanılır; yenidən yoxlayın.", 502);
     const before = numericProductFacts(input), after = numericProductFacts(checked.data);
     if (before.size !== after.size || [...before].some(fact => !after.has(fact))) throw new AppError("Tərcümədə rəqəm, ölçü və ya model dəyişib. Mətn saxlanılmadı; CSV-ni yoxlayın.", 502);
     return checked.data;
